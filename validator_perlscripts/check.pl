@@ -606,7 +606,7 @@ if (($File->{DOCTYPE} eq "HTML5") or ($File->{DOCTYPE} eq "XHTML5")) {
         
     }  else {
         $File->{'Error Flagged'} = TRUE;
-        print "error";
+        print "html5";
         }
 }
 elsif (($File->{DOCTYPE} eq '') and
