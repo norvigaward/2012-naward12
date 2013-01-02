@@ -63,6 +63,10 @@ use HTTP::Request qw();
 use HTTP::Headers::Auth qw();      # Needs to be imported after other HTTP::*.
 use JSON 2.00 qw();
 use SGML::Parser::OpenSP 0.991 qw();
+use URI qw();                 # Need 1.53 for secure()
+use URI::Escape qw(uri_escape);
+use URI::file;
+use URI::Heuristic qw();
 
 ###############################################################################
 #### Constant definitions. ####################################################
@@ -217,7 +221,7 @@ EOF
     local $ENV{XML_CATALOG_FILES} =
         catfile($CFG->{Paths}->{SGML}->{Library}, 'catalog.xml');
     require XML::LibXML;
-    XML::LibXML->VERSION(1.73);    # Need 1.73 for rt.cpan.org #66642
+    #XML::LibXML->VERSION(1.73);    # Need 1.73 for rt.cpan.org #66642
 
 }    # end of BEGIN block.
 
