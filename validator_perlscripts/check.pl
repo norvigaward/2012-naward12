@@ -967,6 +967,12 @@ sub html5_validate (\$)
     else {
         $req->header('Accept-Encoding', 'identity');
     }
+    my $res = $ua->request($req);
+    if (!$res->is_success()) {
+        $File->{'Error Flagged'} = TRUE;
+        print "error";
+    }
+    else {
         my $content = &get_content($File, $res);
         return $File if $File->{'Error Flagged'};
 
@@ -1060,7 +1066,7 @@ sub html5_validate (\$)
             push @{$File->{Errors}}, $err;
 
             # @@ TODO message explanation / elaboration
-        
+        }
     }
     return $File;
 }
