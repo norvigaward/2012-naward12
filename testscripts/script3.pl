@@ -3,9 +3,17 @@
 sub doNothingWithHtml
 {
 	my ($html) = @_;
-	my $errorList = "";
+	my $errorList;
 	my $range = 10;
 	my $forLoop = int(rand($range));
+	if ($forLoop > 0)
+	{
+		$errorList = "";
+	}
+	else
+	{
+		$errorList = ";";
+	}
 	print "$forLoop";
 	$range = 489;
 	for ($i = $forLoop; $i >= 1; $i--)
