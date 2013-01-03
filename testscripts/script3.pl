@@ -8,7 +8,7 @@ sub doNothingWithHtml
 	my $forLoop = int(rand($range));
 	if ($forLoop > 0)
 	{
-		$errorList = "";
+		$errorList = "none";
 	}
 	else
 	{
