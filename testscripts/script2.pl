@@ -7,7 +7,7 @@ sub subScript
         print HANDLE "$html";
         close (HANDLE);
         my $errorCode = `perl script3.pl tmpfile`;
-        system(rm tmpfile);
+        system("rm tmpfile");
         return $errorCode;
 }
 
