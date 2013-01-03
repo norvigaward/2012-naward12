@@ -3,7 +3,7 @@
 sub doNothingWithHtml
 {
 	my ($html) = @_;
-	my $errorList = "";
+	my $errorList = ";";
 	my $range = 10;
 	my $forLoop = int(rand($range));
 	$range = 489;
@@ -14,7 +14,7 @@ sub doNothingWithHtml
 	}
 	$errorList .= "\t";
 	my @htmlArray = ("HTML1", "HTML2", "HTML3", "XHTML1");
-	$range = 3;
+	$range = 4;
 	$errorList .= $htmlArray[int(rand($range))];
 	return $errorList;
 }
