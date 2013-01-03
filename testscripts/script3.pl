@@ -4,17 +4,17 @@ sub doNothingWithHtml
 {
 	my ($html) = @_;
 	my $errorList = "100;";
-	#my $range = 10;
-	#my $forLoop = int(rand($range));
-	#$range = 489;
-	#for ($forLoop; $forLoop>= 1; $forLoop--)
-	#{
-	#	$errorList .= (int(rand($range))+1);
-	#	$errorList .= ";";
-	#}
+	my $range = 10;
+	my $forLoop = int(rand($range));
+	$range = 489;
+	for ($forLoop; $forLoop>= 1; $forLoop--)
+	{
+		$errorList .= (int(rand($range))+1);
+		$errorList .= ";";
+	}
 	$errorList .= "\t";
-	#my @htmlArray = ("HTML1", "HTML2", "HTML3", "XHTML1");
-	#$range = 4;
+	my @htmlArray = ("HTML1", "HTML2", "HTML3", "XHTML1");
+	$range = 4;
 	$errorList .= $htmlArray[int(rand($range))];
 	return $errorList;
 }
