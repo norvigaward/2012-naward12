@@ -3,7 +3,11 @@
 sub subScript
 {
         my ($html) = @_;
-        my $errorCode = `perl script3.pl '$html'`;
+        open(HANDLE,">tmpfile");
+        print HANDLE "$html";
+        close (HANDLE);
+        my $errorCode = `perl script3.pl tmpfile`;
+        system(rm tmpfile);
         return $errorCode;
 }
 
