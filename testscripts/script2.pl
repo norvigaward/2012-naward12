@@ -24,6 +24,7 @@ while(<>)
     } else {
         $html_picture = 0;
     }
-        print "$url\t$errorCodeTabVersie\t$html_picture\n"; #print $_ dan tab dan $error code
+        $versie = "100;";
+        print "$url\t$errorCodeTabVersie\t$versie\t$html_picture\n"; #print $_ dan tab dan $error code
         $/ = "\t";
 }
