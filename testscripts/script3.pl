@@ -12,7 +12,7 @@ sub doNothingWithHtml
 		$errorList .= (int(rand($range))+1);
 		$errorList .= ";";
 	}
-	$errorList .= "\t";
+	#$errorList .= "\t";
 	my @htmlArray = ("HTML1", "HTML2", "HTML3", "XHTML1");
 	$range = 4;
 	$errorList .= $htmlArray[int(rand($range))];
