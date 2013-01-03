@@ -3,7 +3,7 @@
 sub doNothingWithHtml
 {
 	my ($html) = @_;
-	my $errorList = ";";
+	my $errorList = "100;";
 	my $range = 10;
 	my $forLoop = int(rand($range));
 	$range = 489;
