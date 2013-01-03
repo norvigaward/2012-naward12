@@ -5,20 +5,21 @@ sub doNothingWithHtml
 	my ($html) = @_;
 	my $errorList;
 	my $range = 10;
+	my $getal;
 	my $forLoop = int(rand($range));
 	if ($forLoop > 0)
 	{
-		$errorList = "none";
+		$errorList = "";
 	}
 	else
 	{
-		$errorList = ";";
+		$errorList = "none;";
 	}
-	print "$forLoop";
 	$range = 489;
 	for ($i = $forLoop; $i >= 1; $i--)
 	{
-		$errorList.= (int(rand($range))+1);
+		$getal = int(rand($range))+1;
+		$errorList.= $getal;
 		$errorList.= ";";
 	}
 	$errorList.= "-";
