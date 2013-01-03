@@ -13,7 +13,7 @@ sub doNothingWithHtml
 	}
 	else
 	{
-		$errorList = "none;";
+		$errorList = ";";
 	}
 	$range = 489;
 	for ($i = $forLoop; $i >= 1; $i--)
