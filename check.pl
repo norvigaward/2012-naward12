@@ -1,4 +1,4 @@
-#!/usr/bin/perl -T
+#!/usr/bin/perl -T -w
 #
 # W3C Markup Validation Service
 # A CGI script to retrieve and validate a markup file
@@ -239,7 +239,8 @@ delete $ENV{PATH};
 # Create a new CGI object.
 my $q = CGI->new;
 #print Data::Dumper::Dumper($q);
-my $fragment = @_;
+undef($\);
+my $fragment = <>;
 print Data::Dumper::Dumper($fragment);
 $q->param('fragment',$fragment);
 #print Data::Dumper::Dumper($q);
@@ -717,9 +718,13 @@ if (!$File->{'Is Valid'} && $File->{Opt}->{'Show Tidy'}) {
 #print "\n";
 #print Data::Dumper::Dumper($File), "\n";
 #print Data::Dumper::Dumper($File->{Warnings}), "\n";
-#print Data::Dumper::Dumper(scalar @{$File->{Errors}}), "\n";
 
 
+print Data::Dumper::Dumper(scalar @{$File->{Errors}}), "\n";
+print Data::Dumper::Dumper(@{$File->{Errors}}), "\n";
+
+@{$File->{Errors}} = grep defined, @{$File->{Errors}};
+print Data::Dumper::Dumper(scalar @{$File->{Errors}}), "\n";
 foreach (@{$File->{Errors}}) {
 	$_=$_->{'num'};
 }
