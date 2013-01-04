@@ -603,6 +603,7 @@ if (($File->{DOCTYPE} eq "HTML5") or ($File->{DOCTYPE} eq "XHTML5")) {
     }  else {
         $File->{'Error Flagged'} = TRUE;
         print "html5";
+        exit;
         }
 }
 elsif (($File->{DOCTYPE} eq '') and
@@ -723,7 +724,9 @@ foreach (@{$File->{Errors}}) {
 	$_=$_->{'num'};
 }
 print join(";",@{$File->{Errors}});
-print "";  
+print ";";  
+print "\t";
+print $File->{DOCTYPE};
 #
 # Get rid of $File object and exit.
 undef $File;
@@ -796,10 +799,8 @@ sub compoundxml_validate (\$)
     my $res = $ua->request($req);
     if (!$res->is_success()) {
         $File->{'Error Flagged'} = TRUE;
-        my $tmpl = &get_error_template($File);
-        $tmpl->param(fatal_no_checker      => TRUE);
-        $tmpl->param(fatal_missing_checker => 'HTML5 Validator');
-        $tmpl->param(fatal_checker_error   => $res->status_line());
+        print "error compound html";
+        exit;
     }
     else {
         my $content = &get_content($File, $res);
@@ -819,10 +820,8 @@ sub compoundxml_validate (\$)
         if ($@) {
             my $errmsg = $@;
             $File->{'Error Flagged'} = TRUE;
-            my $tmpl = &get_error_template($File);
-            $tmpl->param(fatal_no_checker      => TRUE);
-            $tmpl->param(fatal_missing_checker => 'HTML5 Validator');
-            $tmpl->param(fatal_checker_error   => $errmsg);
+            print "error compound html 2";
+            exit;
             return $File;
         }
         my @nodelist      = $xmlDOM->getElementsByTagName("messages");
@@ -966,7 +965,8 @@ sub html5_validate (\$)
     my $res = $ua->request($req);
     if (!$res->is_success()) {
         $File->{'Error Flagged'} = TRUE;
-        print "error";
+        print "error html5";
+        exit;
     }
     else {
         my $content = &get_content($File, $res);
@@ -985,10 +985,8 @@ sub html5_validate (\$)
         if ($@) {
             my $errmsg = $@;
             $File->{'Error Flagged'} = TRUE;
-            my $tmpl = &get_error_template($File);
-            $tmpl->param(fatal_no_checker      => TRUE);
-            $tmpl->param(fatal_missing_checker => 'HTML5 Validator');
-            $tmpl->param(fatal_checker_error   => $errmsg);
+            print "error html5 2";
+            exit;
             return $File;
         }
         my @nodelist      = $xmlDOM->getElementsByTagName("messages");
@@ -1509,9 +1507,8 @@ sub parse_content_type
         }
         else {
             $File->{'Error Flagged'} = TRUE;
-            my $tmpl = &get_error_template($File);
-            $tmpl->param(fatal_mime_error => TRUE);
-            $tmpl->param(fatal_mime_ct    => $ct);
+            print "error no readable content-type";
+            exit;
         }
     }
 
@@ -1534,13 +1531,8 @@ sub get_content ($$)
         my $cenc = $res->header("Content-Encoding");
         my $uri  = $res->request->uri;
         $File->{'Error Flagged'} = TRUE;
-        my $tmpl = &get_error_template($File);
-        $tmpl->param(fatal_decode_error  => TRUE);
-        $tmpl->param(fatal_decode_errmsg => $errmsg);
-        $tmpl->param(fatal_decode_cenc   => $cenc);
-
-        # Include URI because it might be a subsystem (eg. HTML5 validator) one
-        $tmpl->param(fatal_decode_uri => $uri);
+        print "error get_content";Ä 
+        exit;
     }
 
     return $content;
@@ -2281,7 +2273,8 @@ sub prepCGI
 
             # No Referer header was found.
             $File->{'Error Flagged'} = TRUE;
-            &get_error_template($File)->param(fatal_referer_error => TRUE);
+            print "referer error";
+            exit;
         }
     }
 
@@ -2305,9 +2298,8 @@ sub prepCGI
     # Flag an error if we didn't get a file to validate.
     unless ($q->param('uri')) {
         $File->{'Error Flagged'} = TRUE;
-        my $tmpl = &get_error_template($File);
-        $tmpl->param(fatal_uri_error  => TRUE);
-        $tmpl->param(fatal_uri_scheme => 'undefined');
+        print "error no file"
+        exit;
     }
 
     return $q;
@@ -2559,13 +2551,8 @@ sub transcode
             # The encoding is not supported due to policy
 
             $File->{'Error Flagged'} = TRUE;
-            my $tmpl = &get_error_template($File);
-            $tmpl->param(fatal_transcode_error   => TRUE);
-            $tmpl->param(fatal_transcode_charset => $cs);
-
-            # @@FIXME might need better text
-            $tmpl->param(fatal_transcode_errmsg =>
-                    'This encoding is not supported by the validator.');
+            print "error encoding not supported";
+            exit;
             return $File;
         }
         elsif (index($CFG->{Charsets}->{$cs}, 'X ') != -1) {
@@ -2586,12 +2573,8 @@ sub transcode
         # the character encoding; might need additional modules
 
         $File->{'Error Flagged'} = TRUE;
-        my $tmpl = &get_error_template($File);
-        $tmpl->param(fatal_transcode_error   => TRUE);
-        $tmpl->param(fatal_transcode_charset => $cs);
-
-        # @@FIXME might need better text
-        $tmpl->param(fatal_transcode_errmsg => 'Encoding not supported.');
+        print "error encoding not supported,2";
+        exit;
         return $File;
     }
     elsif (!$CFG->{Charsets}->{$cs}) {
@@ -2993,9 +2976,8 @@ sub error
     # No or unknown FPI and a relative SI.
     if ($err->{msg} =~ m(cannot (?:open|find))) {
         $File->{'Error Flagged'} = TRUE;
-        my $tmpl = &W3C::Validator::MarkupValidator::get_error_template($File);
-        $tmpl->param(fatal_parse_extid_error => TRUE);
-        $tmpl->param(fatal_parse_extid_msg   => $err->{msg});
+        print "error, can't find error";
+        exit;
     }
 
     # No DOCTYPE found! We are falling back to vanilla DTD
