@@ -718,7 +718,7 @@ if (!$File->{'Is Valid'} && $File->{Opt}->{'Show Tidy'}) {
 #print "\n";
 #print Data::Dumper::Dumper($File), "\n";
 #print Data::Dumper::Dumper($File->{Warnings}), "\n";
-
+my ($num_errors, $num_warnings, $num_info, $reported_errors) = &report_errors($File);
 
 print Data::Dumper::Dumper(scalar @{$File->{Errors}}), "\n";
 print Data::Dumper::Dumper(@{$File->{Errors}}), "\n";
