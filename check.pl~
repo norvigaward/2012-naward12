@@ -1,4 +1,4 @@
-#!/usr/bin/perl -T
+#!/usr/bin/perl -T -w
 #
 # W3C Markup Validation Service
 # A CGI script to retrieve and validate a markup file
@@ -239,7 +239,8 @@ delete $ENV{PATH};
 # Create a new CGI object.
 my $q = CGI->new;
 #print Data::Dumper::Dumper($q);
-my $fragment = @_;
+$_=<>;
+my $fragment = $_;
 #print Data::Dumper::Dumper($fragment);
 $q->param('fragment',$fragment);
 #print Data::Dumper::Dumper($q);
