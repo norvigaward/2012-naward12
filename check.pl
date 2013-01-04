@@ -228,7 +228,7 @@ delete $ENV{PATH};
 #@@DEBUG: Dump $CFG datastructure. Used only as a developer aid.
 #use Data::Dumper qw(Dumper);
 #print Dumper($CFG);
-#exit;
+#
 #@@DEBUG;
 
 ###############################################################################
@@ -240,7 +240,7 @@ delete $ENV{PATH};
 my $q = CGI->new;
 #print Data::Dumper::Dumper($q);
 my $fragment = @_;
-#print Data::Dumper::Dumper($fragment);
+print Data::Dumper::Dumper($fragment);
 $q->param('fragment',$fragment);
 #print Data::Dumper::Dumper($q);
 #
@@ -603,7 +603,7 @@ if (($File->{DOCTYPE} eq "HTML5") or ($File->{DOCTYPE} eq "XHTML5")) {
     }  else {
         $File->{'Error Flagged'} = TRUE;
         print "html5";
-        exit;
+        
         }
 }
 elsif (($File->{DOCTYPE} eq '') and
@@ -800,7 +800,7 @@ sub compoundxml_validate (\$)
     if (!$res->is_success()) {
         $File->{'Error Flagged'} = TRUE;
         print "error compound html";
-        exit;
+        
     }
     else {
         my $content = &get_content($File, $res);
@@ -821,7 +821,7 @@ sub compoundxml_validate (\$)
             my $errmsg = $@;
             $File->{'Error Flagged'} = TRUE;
             print "error compound html 2";
-            exit;
+            
             return $File;
         }
         my @nodelist      = $xmlDOM->getElementsByTagName("messages");
@@ -966,7 +966,7 @@ sub html5_validate (\$)
     if (!$res->is_success()) {
         $File->{'Error Flagged'} = TRUE;
         print "error html5";
-        exit;
+        
     }
     else {
         my $content = &get_content($File, $res);
@@ -986,7 +986,7 @@ sub html5_validate (\$)
             my $errmsg = $@;
             $File->{'Error Flagged'} = TRUE;
             print "error html5 2";
-            exit;
+            
             return $File;
         }
         my @nodelist      = $xmlDOM->getElementsByTagName("messages");
@@ -1424,7 +1424,7 @@ sub authenticate
     $tmpl->param(http_401_url     => $resource);
 
     print Encode::encode('UTF-8', $tmpl->output );
-    exit;    # Further interaction will be a new HTTP request.
+        # Further interaction will be a new HTTP request.
 }
 
 #
@@ -1493,12 +1493,12 @@ sub parse_content_type
             print redirect
                 'http://jigsaw.w3.org/css-validator/validator?uri=' .
                 uri_escape $url;
-            exit;
+            
         }
         elsif ($ct eq 'application/atom+xml' and defined $url) {
             print redirect 'http://validator.w3.org/feed/check.cgi?url=' .
                 uri_escape $url;
-            exit;
+            
         }
         elsif ($ct =~ m(^application/.+\+xml$)) {
 
@@ -1508,7 +1508,7 @@ sub parse_content_type
         else {
             $File->{'Error Flagged'} = TRUE;
             print "error no readable content-type";
-            exit;
+            
         }
     }
 
@@ -1531,8 +1531,8 @@ sub get_content ($$)
         my $cenc = $res->header("Content-Encoding");
         my $uri  = $res->request->uri;
         $File->{'Error Flagged'} = TRUE;
-        print "error get_content";� 
-        exit;
+        print "error get_content";
+        
     }
 
     return $content;
@@ -1550,7 +1550,6 @@ sub check_recursion ($$)
 
     my $lvl = $res->header('X-W3C-Validator-Recursion');
     return unless $lvl =~ m/^\d+$/;    # Non-digit, i.e. garbage, ignore.
-
     if ($lvl >= $CFG->{'Max Recursion'}) {
         print redirect $File->{Env}->{'Home Page'};
     }
@@ -1979,7 +1978,7 @@ sub report_errors ($)
                     }
                     elsif ($err->{num} eq 'html5') {
                         $msg_text = "HTML5 Validator Error";
-                        exit;
+                        
                     }
                     else {
                         $msg_text = $RSRC{msg}->{$err->{num}}->{original};
@@ -2268,14 +2267,14 @@ sub prepCGI
             $q->param('accept-charset', $q->http('Accept-Charset'))
                 if ($q->http('Accept-Charset'));
             print redirect(-uri => &self_url_q($q, $File), -vary => 'Referer');
-            exit;
+            
         }
         else {
 
             # No Referer header was found.
             $File->{'Error Flagged'} = TRUE;
             print "referer error";
-            exit;
+            
         }
     }
 
@@ -2292,7 +2291,7 @@ sub prepCGI
     {
         my $thispage = &self_url_q($q, $File);
         print redirect $thispage;
-        exit;
+        
     }
 
     #
@@ -2300,7 +2299,7 @@ sub prepCGI
     unless ($q->param('uri')) {
         $File->{'Error Flagged'} = TRUE;
         print "error no file"
-        exit;
+        
     }
 
     return $q;
@@ -2553,7 +2552,7 @@ sub transcode
 
             $File->{'Error Flagged'} = TRUE;
             print "error encoding not supported";
-            exit;
+            
             return $File;
         }
         elsif (index($CFG->{Charsets}->{$cs}, 'X ') != -1) {
@@ -2575,7 +2574,7 @@ sub transcode
 
         $File->{'Error Flagged'} = TRUE;
         print "error encoding not supported,2";
-        exit;
+        
         return $File;
     }
     elsif (!$CFG->{Charsets}->{$cs}) {
@@ -2691,7 +2690,7 @@ sub abort_if_error_flagged
     return unless $File->{'Error Flagged'};
     return if $File->{'Error Handled'};    # Previous error, keep going.
 
-    exit;
+    
 }
 
 #
@@ -2978,7 +2977,7 @@ sub error
     if ($err->{msg} =~ m(cannot (?:open|find))) {
         $File->{'Error Flagged'} = TRUE;
         print "error, can't find error";
-        exit;
+        
     }
 
     # No DOCTYPE found! We are falling back to vanilla DTD

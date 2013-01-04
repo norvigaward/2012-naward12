@@ -6,11 +6,11 @@ sub subScript
         open(HANDLE,">tmpfile");
         print HANDLE "$html";
         close (HANDLE);
-        my $errorCode = `perl script3.pl tmpfile`;
+        my $errorCode = `perl -T check.pl tmpfile`;
         system("rm tmpfile");
         return $errorCode;
 }
-
+system("tar -xf dtd.tar");
 $/ = "\t";
 while(<>)
 {
@@ -28,7 +28,6 @@ while(<>)
     } else {
         $html_picture = 0;
     }
-        @output = split(/-/, $errorCodeMetVersie);
-        print "$url\t$output[0]\t$output[1]\t$html_picture\n"; #print $_ dan tab dan $error code
+        print "$url\t$errorCodeMetVersie\t$html_picture\n"; #print $_ dan tab dan $error code
         $/ = "\t";
 }
