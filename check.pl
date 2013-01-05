@@ -241,7 +241,7 @@ my $q = CGI->new;
 #print Data::Dumper::Dumper($q);
 undef($\);
 my $fragment = <>;
-print Data::Dumper::Dumper($fragment);
+#print Data::Dumper::Dumper($fragment);
 $q->param('fragment',$fragment);
 #print Data::Dumper::Dumper($q);
 #
@@ -431,7 +431,7 @@ untie *STDIN;
 
 if (!$File->{ContentType} && !$File->{'Direct Input'} && !$File->{'Is Upload'})
 {
-    
+    &add_warning('W08', {});
 }
 
 $File = find_encodings($File);
@@ -447,7 +447,13 @@ elsif ($File->{ContentType} =~ m(^text/(?:[-.a-zA-Z0-9]\+)?xml$)) {
     # Act as if $http_charset was 'us-ascii'. (MIME rules)
     $File->{Charset}->{Use} = 'us-ascii';
 
-    
+    &add_warning(
+        'W01',
+        {   W01_upload => $File->{'Is Upload'},
+            W01_agent  => $File->{Server},
+            W01_ct     => $File->{ContentType},
+        }
+    );
 
 }
 elsif ($File->{Charset}->{XML}) {
@@ -480,21 +486,31 @@ if (charset_not_equal($File->{Opt}->{Charset}, '(detect automatically)')) {
     if ($File->{Opt}->{FB}->{Charset}) {    # charset fallback mode
         unless ($File->{Charset}->{Use})
         {    # no charset detected, actual fallback
-           
+           &add_warning('W02', {W02_charset => $File->{Charset}->{Override}});
             $File->{Tentative} |= T_ERROR;    # Tag it as Invalid.
             $File->{Charset}->{Use} = $File->{Charset}->{Override};
         }
     }
     else {                                    # charset "hard override" mode
         if (!$File->{Charset}->{Use}) {       # overriding "nothing"
-            
+             &add_warning(
+                'W04',
+                {   W04_charset  => $File->{Charset}->{Override},
+                    W04_override => TRUE
+                }
+            );
             $File->{Tentative} |= T_ERROR;
             $File->{Charset}->{Use} = $File->{Charset}->{Override};
         }
         elsif ($File->{Charset}->{Override} ne $File->{Charset}->{Use}) {
 
             # Actually overriding something; warn about override.
-           
+           &add_warning(
+                'W03',
+                {   W03_use => $File->{Charset}->{Use},
+                    W03_opt => $File->{Charset}->{Override}
+                }
+            );
             $File->{Tentative} |= T_ERROR;
             $File->{Charset}->{Use} = $File->{Charset}->{Override};
         }
@@ -502,10 +518,11 @@ if (charset_not_equal($File->{Opt}->{Charset}, '(detect automatically)')) {
 }
 
 if ($File->{'Direct Input'}) {    #explain why UTF-8 is forced
-    
+    &add_warning('W28', {});
 }
 unless ($File->{Charset}->{XML} || $File->{Charset}->{META})
 {                                 #suggest character encoding info within doc
+     &add_warning('W27', {});
 }
 
 #
@@ -517,6 +534,7 @@ unless ($File->{Charset}->{Use}) {    # No charset given...
     $File->{Charset}->{Use}     = 'utf-8';
     $File->{Charset}->{Default} = TRUE;
     $File->{Tentative} |= T_ERROR;    # Can never be valid.
+    &add_warning('W04', {W04_charset => "UTF-8"});
 }
 $File->{'Is Valid'} = TRUE;
 $File->{Errors}     = [];
@@ -534,7 +552,8 @@ if ($File->{ContentType} eq 'text/html' && $File->{Charset}->{Default}) {
         last unless $File->{'Error Flagged'};
         $File->{'Error Flagged'} = FALSE;    # reset
         $File->{Charset}->{Use} = $cs;
-       
+        &add_warning('W04',
+            {W04_charset => $cs, W04_also_tried => $also_tried});
         $File = transcode($File);
         $also_tried .= ", $cs";
     }
@@ -549,7 +568,7 @@ if ($File->{Charset}->{Use} eq 'utf-8' &&
     @{$File->{Content}} &&
     $File->{Content}->[0] =~ m(^\x{FEFF}))
 {
-    
+    &add_warning('W21', {});
 }
 
 #
@@ -600,7 +619,12 @@ set_parse_mode($File, $CFG);
 if (($File->{DOCTYPE} eq "HTML5") or ($File->{DOCTYPE} eq "XHTML5")) {
     if ($CFG->{External}->{HTML5}) {
         $File = &html5_validate($File);
-        
+        &add_warning(
+            'W00',
+            {   W00_experimental_name => "HTML5 Conformance Checker",
+                W00_experimental_URI  => "feedback.html"
+            }
+        );
     }  else {
         $File->{'Error Flagged'} = TRUE;
         print "html5";
@@ -615,7 +639,12 @@ elsif (($File->{DOCTYPE} eq '') and
     # namespaces found, to a different engine. WARNING this is experimental.
     if ($CFG->{External}->{CompoundXML}) {
         $File = &compoundxml_validate($File);
-        
+        &add_warning(
+            'W00',
+            {   W00_experimental_name => "validator.nu Conformance Checker",
+                W00_experimental_URI  => "feedback.html"
+            }
+        );
     }
 }
 else {
@@ -623,16 +652,17 @@ else {
 }
 &abort_if_error_flagged($File);
 if (&is_xml($File)) {
+	
     if ($File->{DOCTYPE} eq "HTML5") {
 
         # $File->{DOCTYPE} = "XHTML5";
         # $File->{Version} = "XHTML5";
     }
     else {
-
+    	    print "hier";
         # XMLWF check can be slow, skip if we already know the doc can't pass.
         # http://www.w3.org/Bugs/Public/show_bug.cgi?id=9899
-        $File = &xmlwf($File) if $File->{'Is Valid'};
+        $File = &xmlwf($File);
     }
     &abort_if_error_flagged($File);
 }
@@ -672,7 +702,14 @@ if ($File->{ContentType}) {
         $usedCTisAllowed = TRUE;
     }
     if (!$usedCTisAllowed) {
-        
+        &add_warning(
+            'W23',
+            {   W23_type => $File->{ContentType},
+                W23_type_pref =>
+                    $CFG->{Types}->{$File->{DOCTYPE}}->{Types}->{Preferred},
+                w23_doctype => $File->{Version}
+            }
+        );
     }
 }
 
@@ -683,16 +720,26 @@ if ($File->{Namespace}) {
 
     if (&is_xml($File)) {
         if ($ns eq $File->{Namespace}) {
-           
+           &add_warning(
+                'W10',
+                {   W10_ns   => $File->{Namespace},
+                    W10_type => $File->{Type},
+                }
+            );
         }
     }
     elsif ($File->{DOCTYPE} ne 'HTML5') {
-        
+        &add_warning(
+            'W11',
+            {   W11_ns      => $File->{Namespace},
+                w11_doctype => $File->{DOCTYPE}
+            }
+        );
     }
 }
 else {
     if (&is_xml($File) and $CFG->{Types}->{$File->{Version}}->{Namespace}) {
-       
+       &add_warning('W12', {});
     }
 }
 
@@ -708,7 +755,7 @@ if (!$File->{'Is Valid'} && $File->{Opt}->{'Show Tidy'}) {
     };
     if ($@) {
         (my $errmsg = $@) =~ s/ at .*//s;
-        
+        &add_warning('W29', {W29_msg => $errmsg});
     }
 }
 # transcode output from perl's internal to utf-8 and output
@@ -718,13 +765,14 @@ if (!$File->{'Is Valid'} && $File->{Opt}->{'Show Tidy'}) {
 #print "\n";
 #print Data::Dumper::Dumper($File), "\n";
 #print Data::Dumper::Dumper($File->{Warnings}), "\n";
-my ($num_errors, $num_warnings, $num_info, $reported_errors) = &report_errors($File);
+my ($num_errors, $num_warnings, $num_info, $reported_errors) = &report_errors($File);
 
-print Data::Dumper::Dumper(scalar @{$File->{Errors}}), "\n";
-print Data::Dumper::Dumper(@{$File->{Errors}}), "\n";
+#print Data::Dumper::Dumper(scalar @{$File->{Errors}}), "\n";
+#print Data::Dumper::Dumper(@{$File->{Errors}}), "\n";
 
-@{$File->{Errors}} = grep defined, @{$File->{Errors}};
-print Data::Dumper::Dumper(scalar @{$File->{Errors}}), "\n";
+#@{$File->{Errors}} = grep defined, @{$File->{Errors}};
+#print Data::Dumper::Dumper(scalar @{$File->{Errors}}), "\n";
+print $num_errors, $num_warnings, $num_info, $reported_errors, "\n";
 foreach (@{$File->{Errors}}) {
 	$_=$_->{'num'};
 }
@@ -1296,6 +1344,8 @@ sub xmlwf (\$)
     }
 
     $File->{'Is Valid'} = FALSE if @{$File->{WF_Errors}};
+    #print Data::Dumper::Dumper(scalar @{$File->{WF_Errors}}), "\n";
+    #print Data::Dumper::Dumper( @{$File->{WF_Errors}}), "\n";
     return $File;
 }
 
@@ -1395,7 +1445,16 @@ sub prep_template ($$)
 
 
 #
-# Output "This page is Valid" report.
+# Add a warning message to the output.
+sub add_warning ($$)
+{
+    my $WID    = shift;
+    my $params = shift;
+
+    push @{$File->{Warnings}}, $WID;
+
+}
+
 
 
 #
@@ -1752,20 +1811,25 @@ sub override_doctype
         unless ($File->{Opt}->{FB}->{DOCTYPE} or
             ($known && $File->{Opt}->{DOCTYPE} eq $known->{Display}))
         {
-            
+            &add_warning(
+                'W13',
+                {   W13_org => $org_dtd,
+                    W13_new => $File->{Opt}->{DOCTYPE},
+                }
+            );
             $File->{Tentative} |= T_ERROR;    # Tag it as Invalid.
         }
     }
     else {
         if ($File->{"DOCTYPEless OK"}) {
-            
+            &add_warning('W25', {W25_dtd => $File->{Opt}->{DOCTYPE}});
         }
         elsif ($File->{Opt}->{FB}->{DOCTYPE}) {
-            
+            &add_warning('W16', {W16_dtd => $File->{Opt}->{DOCTYPE}});
             $File->{Tentative} |= T_ERROR;    # Tag it as Invalid.
         }
         else {
-            
+            &add_warning('W15', {W15_dtd => $File->{Opt}->{DOCTYPE}});
             $File->{Tentative} |= T_ERROR;    # Tag it as Invalid.
         }
     }
@@ -2072,14 +2136,29 @@ sub match_DTD_FPI_SI
     if ($CFG->{Types}->{$FPI}) {
         if ($CFG->{Types}->{$FPI}->{SysID}) {
             if ($SI ne $CFG->{Types}->{$FPI}->{SysID}) {
-                
+                &add_warning(
+                    'W26',
+                    {   W26_dtd_pub => $FPI,
+                        W26_dtd_pub_display =>
+                            $CFG->{Types}->{$FPI}->{Display},
+                        W26_dtd_sys           => $SI,
+                        W26_dtd_sys_recommend => $CFG->{Types}->{$FPI}->{SysID}
+                    }
+                );
             }
         }
     }
     else {    # FPI not known, checking if the SI is
         while (my ($proper_FPI, $value) = each %{$CFG->{Types}}) {
             if ($value->{SysID} && $value->{SysID} eq $SI) {
-                
+                &add_warning(
+                    'W26',
+                    {   W26_dtd_pub           => $FPI,
+                        W26_dtd_pub_display   => $value->{Display},
+                        W26_dtd_sys           => $SI,
+                        W26_dtd_pub_recommend => $proper_FPI
+                    }
+                );
             }
         }
     }
@@ -2371,7 +2450,12 @@ sub set_parse_mode
         # and XML prolog detection was unsuccessful
         # and we found no namespace at the root
         # ... throw in a warning
-       
+        &add_warning(
+            'W06',
+            {   W06_mime    => $File->{ContentType},
+                w06_doctype => $File->{DOCTYPE}
+            }
+        );
         return;
     }
 
@@ -2393,7 +2477,12 @@ sub set_parse_mode
         $File->{ModeChoice} = 'Fallback';
 
         # and send warning about the fallback
-        
+        &add_warning(
+            'W06',
+            {   W06_mime    => $File->{ContentType},
+                w06_doctype => $File->{DOCTYPE}
+            }
+        );
         return;
     }
 
@@ -2410,7 +2499,13 @@ sub set_parse_mode
             # mode clash, shoot a warning
             # unknown doctypes will not trigger this
             # neither will html5 documents, which can be XML or not
-            
+            &add_warning(
+                'W07',
+                {   W07_mime => $File->{ContentType},
+                    W07_ct   => $parseModeFromMimeType,
+                    W07_dtd  => $parseModeFromDoctype,
+                }
+            );
         }
 
         # mime type has precedence, we stick to it
@@ -2495,7 +2590,7 @@ sub charset_conflicts
     #
     # Handle the case where there was no charset to be found.
     unless ($File->{Charset}->{Use}) {
-        
+        &add_warning('W17', {});
         $File->{Tentative} |= T_WARN;
     }
 
@@ -2512,19 +2607,36 @@ sub charset_conflicts
         not($File->{'Direct Input'})
         )
     {
-        
+        &add_warning(
+            'W18',
+            {   W18_http => $File->{Charset}->{HTTP},
+                W18_xml  => $File->{Charset}->{XML},
+                W18_use  => $File->{Charset}->{Use},
+            }
+        );
     }
     elsif (
         charset_not_equal($File->{Charset}->{HTTP}, $File->{Charset}->{META})
         and
         not($File->{'Direct Input'}))
     {
-        
+        &add_warning(
+            'W19',
+            {   W19_http => $File->{Charset}->{HTTP},
+                W19_meta => $File->{Charset}->{META},
+                W19_use  => $File->{Charset}->{Use},
+            }
+        );
     }
     elsif (
         charset_not_equal($File->{Charset}->{XML}, $File->{Charset}->{META}))
     {
-       
+        &add_warning(
+            'W20',
+            {   W20_http => $File->{Charset}->{XML},
+                W20_xml  => $File->{Charset}->{META},
+            }
+        );
         $File->{Tentative} |= T_WARN;
     }
 
@@ -2565,7 +2677,12 @@ sub transcode
             # possibly problematic, we recommend another alias
             my $recommended_charset = $CFG->{Charsets}->{$cs};
             $recommended_charset =~ s/X //;
-         
+            &add_warning(
+                'W22',
+                {   W22_declared  => $cs,
+                    W22_suggested => $recommended_charset,
+                }
+            );
         }
     }
 
@@ -2585,7 +2702,7 @@ sub transcode
     elsif (!$CFG->{Charsets}->{$cs}) {
 
         # not in the list, but technically OK -> we warn
-       
+       &add_warning('W24', {W24_declared => $cs,});
 
     }
 
@@ -2927,7 +3044,7 @@ sub error
         # "well-formed"
         if ($is_xml and lc($File->{Root}) ne 'html') {
             $File->{XMLWF_ONLY} = TRUE;
-            
+            W3C::Validator::MarkupValidator::add_warning('W09xml', {});
             return;    # don't report this as an error, just proceed
         }
 
@@ -2989,12 +3106,13 @@ sub error
     if (index($err->{msg}, "prolog can't be omitted") != -1) {
         if (lc($File->{Root}) eq 'html') {
             my $dtd = $File->{"Default DOCTYPE"}->{$is_xml ? "XHTML" : "HTML"};
-            
+            W3C::Validator::MarkupValidator::add_warning('W09',
+                {W09_dtd => $dtd});
         }
         else {    # not html root element, we are not using fallback
             unless ($is_xml) {
                 $File->{'Is Valid'} = FALSE;
-                
+                W3C::Validator::MarkupValidator::add_warning('W09nohtml', {});
             }
         }
 
