@@ -1,4 +1,5 @@
 -- dit script telt hoe vaak elke error code voorkomt
+-- als een errorcode meerdere malen bij 1 url voorkomt wordt deze 1x geteld
 
 a = load 'hdfs://p-head03.alley.sara.nl/user/naward12/test5/*' as (url: chararray, errorcode: chararray, htmlversion, tag);
 b = foreach a generate url, REPLACE (errorcode, '[^0-9]', ' ') as errorcode;
