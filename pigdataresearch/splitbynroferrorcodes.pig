@@ -1,3 +1,5 @@
+--dit script splitst op dit moment de errorcodes maar nog niet zeker hoe verder
+
 a = load 'hdfs://p-head03.alley.sara.nl/user/naward12/twinkle/part-m-00000' as (url: chararray, errorcode: chararray, htmlversion, tag);
 b = foreach a generate url, REPLACE (errorcode, '[^0-9]', ' ') as errorcode;
 c = foreach b generate url, TOKENIZE(errorcode) as errorcode;
