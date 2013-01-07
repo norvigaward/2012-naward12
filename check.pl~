@@ -239,11 +239,10 @@ delete $ENV{PATH};
 # Create a new CGI object.
 my $q = CGI->new;
 #print Data::Dumper::Dumper($q);
-undef($\);
 my $fragment = <>;
 #print Data::Dumper::Dumper($fragment);
 $q->param('fragment',$fragment);
-
+#print Data::Dumper::Dumper($q);
 #
 # The data structure that will hold all session data.
 # @@FIXME This can't be my() as $File will sooner or

@@ -1,4 +1,4 @@
-#!/usr/bin/perperl -T -w
+#!/usr/bin/perl -T -w
 #
 # W3C Markup Validation Service
 # A CGI script to retrieve and validate a markup file
@@ -130,15 +130,15 @@ BEGIN {
         $CFG = \%cfg;
     };
     if ($@) {
-    	    die <<"EOF";
+        die <<"EOF";
 Could not read configuration.  Set the W3C_VALIDATOR_CFG environment variable
 or copy conf/* to /etc/w3c/. Make sure that the configuration file and all
 included files are readable by the web server user. The error was:\n'$@'
 EOF
-    	    }
-    	    
-    	    #
-    	    # Check paths in config
+    }
+
+    #
+    # Check paths in config
     # @@FIXME: This does not do a very good job error-message-wise if
     # a path is missing...
     
