@@ -1,4 +1,5 @@
 -- dit script filtert alle tuples eruit die een tag hebben maar toch html fouten
+-- we kunnen later een count toevoegen om het aantal te tellen
 -- replace kan weg, als er in plaats van ; kommas , gebruikt worden
 
 a = load 'hdfs://p-head03.alley.sara.nl/user/naward12/test5/*' as (url: chararray, errorcode: chararray, htmlversion, tag);
