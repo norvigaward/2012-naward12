@@ -28,7 +28,7 @@ system("tar -xf dtd.tar");
 use strict;
 use warnings;
 use utf8;
-use Data::Dumper;
+#use Data::Dumper;
 
 package W3C::Validator::MarkupValidator;
 
@@ -63,11 +63,10 @@ use HTTP::Request qw();
 use HTTP::Headers::Auth qw();      # Needs to be imported after other HTTP::*.
 use JSON 2.00 qw();
 use SGML::Parser::OpenSP 0.991 qw();
-use Benchmark qw();
-#use URI 1.53 qw();                 # Need 1.53 for secure()
-#use URI::Escape qw(uri_escape);
-#use URI::file;
-#use URI::Heuristic qw();
+use URI qw();                 # Need 1.53 for secure()
+use URI::Escape qw(uri_escape);
+use URI::file;
+use URI::Heuristic qw();
 
 ###############################################################################
 #### Constant definitions. ####################################################
@@ -235,13 +234,21 @@ EOF
 $/ = "\t";
 while(<>)
 {
+	eval{
 	my $url = $_;
 	chomp($url);
+	$_ = <>;
+	my $charset = $_;
+	chomp($charset);
+	
 	$/ = "\n";
 	$_ = <>;
 	my $html = "$_\n";
+	if($charset eq 'fail'){
+		$charset = undef;
+	}
 	
-	my $html_picture = 0;
+	my $valid = 0;
 	#if($html =~ /".*href\=\"http\:\/\/validator.w3.org\/check\?uri\=referer\".*"/i)
 	#{
 	#	$html_picture = 1;
@@ -273,7 +280,7 @@ while(<>)
 	# Charset data (casing policy: lowercase early).
 	$File->{Charset}->{Use}      = ''; # The charset used for validation.
 	$File->{Charset}->{Auto}     = ''; # Autodetection using XML rules (Appendix F)
-	$File->{Charset}->{HTTP}     = ''; # From HTTP's "charset" parameter.
+	$File->{Charset}->{HTTP}     = $charset; # From HTTP's "charset" parameter.
 	$File->{Charset}->{META}     = ''; # From HTML's <meta http-equiv>.
 	$File->{Charset}->{XML}      = ''; # From the XML Declaration.
 	$File->{Charset}->{Override} = ''; # From CGI/user override.
@@ -435,7 +442,7 @@ while(<>)
 	#
 	# We don't need STDIN any more, so get rid of it to avoid getting clobbered
 	# by Apache::Registry's idiotic interference under mod_perl.
-	untie *STDIN;
+	#untie *STDIN;
 	
 	###############################################################################
 	#### Output validation results. ###############################################
@@ -636,6 +643,7 @@ while(<>)
                 }
                 else {
                 	$File->{'Error Flagged'} = TRUE;
+                	print "error_html5";
                 	#my $tmpl = &get_error_template($File);
                 	#$tmpl->param(fatal_no_checker      => TRUE);
                 	#$tmpl->param(fatal_missing_checker => 'HTML5 Validator');
@@ -671,7 +679,7 @@ while(<>)
                 	
                 	# XMLWF check can be slow, skip if we already know the doc can't pass.
                 	# http://www.w3.org/Bugs/Public/show_bug.cgi?id=9899
-                	$File = &xmlwf($File) if $File->{'Is Valid'};
+                	#$File = &xmlwf($File) if $File->{'Is Valid'};
                 }
                 &abort_if_error_flagged($File);
         }
@@ -792,13 +800,18 @@ while(<>)
 	print "\t";
 	print $File->{DOCTYPE};
 	print "\t";
-	print $html_picture;
+	print $File->{'Is Valid'};
 	print "\n";
         #
         # Get rid of $File object and exit.
         undef $File;
 	undef $html;
 	$/ = "\t";
+};
+	if ($@) {
+		print ":(\terror\terror\terror\n";
+		$/ = "\t";
+	}
 }
 
 
@@ -872,6 +885,7 @@ sub compoundxml_validate (\$)
         my $res = $ua->request($req);
         if (!$res->is_success()) {
                 $File->{'Error Flagged'} = TRUE;
+                print "error_compound";
                 #my $tmpl = &get_error_template($File);
                 #$tmpl->param(fatal_no_checker      => TRUE);
                 #$tmpl->param(fatal_missing_checker => 'HTML5 Validator');
@@ -895,6 +909,7 @@ sub compoundxml_validate (\$)
                 if ($@) {
                 	my $errmsg = $@;
                 	$File->{'Error Flagged'} = TRUE;
+                	print "error_compund2";
                 	#my $tmpl = &get_error_template($File);
                 	#$tmpl->param(fatal_no_checker      => TRUE);
                 	#$tmpl->param(fatal_missing_checker => 'HTML5 Validator');
@@ -1044,6 +1059,7 @@ sub html5_validate (\$)
         my $res = $ua->request($req);
         if (!$res->is_success()) {
                 $File->{'Error Flagged'} = TRUE;
+                print "error_html5";
                 #my $tmpl = &get_error_template($File);
                 #$tmpl->param(fatal_no_checker      => TRUE);
                 #$tmpl->param(fatal_missing_checker => 'HTML5 Validator');
@@ -1066,6 +1082,7 @@ sub html5_validate (\$)
                 if ($@) {
                 	my $errmsg = $@;
                 	$File->{'Error Flagged'} = TRUE;
+                	print "error_html5";
                 	#my $tmpl = &get_error_template($File);
                 	#$tmpl->param(fatal_no_checker      => TRUE);
                 	#$tmpl->param(fatal_missing_checker => 'HTML5 Validator');
@@ -1677,7 +1694,7 @@ sub authenticate
         #$tmpl->param(http_401_url     => $resource);
         
         #print Encode::encode('UTF-8', $tmpl->output );
-        exit;    # Further interaction will be a new HTTP request.
+        die;    # Further interaction will be a new HTTP request.
 }
 
 #
@@ -1705,6 +1722,7 @@ sub handle_uri
         
         unless ($ua->is_protocol_supported($uri)) {
                 $File->{'Error Flagged'} = TRUE;
+                print "error_uri";
                 #my $tmpl = &get_error_template($File);
                 
                 # If uri param is empty (also for empty direct or upload), it's been
@@ -1762,7 +1780,7 @@ sub handle_uri
                 }
                 else {
                 	$File->{'Error Flagged'} = TRUE;
-                	
+                	print "error_uri2";
                 	my $no200url = undef;
                 	if (!$File->{Opt}->{No200}) {
                 		
@@ -1850,7 +1868,7 @@ sub handle_file
         my $h = $q->uploadInfo($p);
         
         local $/ = undef;    # set line delimiter so that <> reads rest of file
-        my $file = <$f>;
+        my $file = <>;
         
         my ($mode, $ct, $charset) =
         &parse_content_type($File, $h->{'Content-Type'});
@@ -1875,12 +1893,8 @@ sub handle_frag
 {
 	my $q    = shift;    # The CGI object.
 	my $File = shift;    # The master datastructure.
-	my $req = HTTP::Request->new(GET => $uri);
-    my ($mode, $ct, $charset) = &parse_content_type(
-                $File,
-                scalar($res->header('Content-Type')),
-                scalar($res->request->uri),
-                );
+	
+	
 	$File->{Bytes}          = $q->param('fragment');
 	$File->{Mode}           = 'TBD';
 	$File->{Modified}       = '';
@@ -1890,7 +1904,6 @@ sub handle_frag
 	$File->{URI}            = 'upload://Form Submission';
 	$File->{'Is Upload'}    = FALSE;
 	$File->{'Direct Input'} = TRUE;
-	$File->{Charset}->{HTTP} = lc $charset if defined $charset;
 	#"utf-8";    # by default, the form accepts utf-8 chars
 	
 	if ($File->{Opt}->{Prefill}) {
@@ -1937,12 +1950,12 @@ sub parse_content_type
                 	print redirect
                 	'http://jigsaw.w3.org/css-validator/validator?uri=' .
                 		uri_escape $url;
-                	exit;
+                	die;
                 }
-                elsif ($ct eq 'application/atom+xml' and defined $url) {
+                elsif ($ct eq 'die/atom+xml' and defined $url) {
                 	print redirect 'http://validator.w3.org/feed/check.cgi?url=' .
                 		uri_escape $url;
-                	exit;
+                	die;
                 }
                 elsif ($ct =~ m(^application/.+\+xml$)) {
                 	
@@ -1951,6 +1964,7 @@ sub parse_content_type
                 }
                 else {
                 	$File->{'Error Flagged'} = TRUE;
+                	print "error_content_type";
                 	#my $tmpl = &get_error_template($File);
                 	#$tmpl->param(fatal_mime_error => TRUE);
                 	#$tmpl->param(fatal_mime_ct    => $ct);
@@ -1976,6 +1990,7 @@ sub get_content ($$)
                 my $cenc = $res->header("Content-Encoding");
                 my $uri  = $res->request->uri;
                 $File->{'Error Flagged'} = TRUE;
+                print "error_get_content";
                 #my $tmpl = &get_error_template($File);
                 #$tmpl->param(fatal_decode_error  => TRUE);
                 #$tmpl->param(fatal_decode_errmsg => $errmsg);
@@ -2554,654 +2569,662 @@ sub match_DTD_FPI_SI
 # Do an initial parse of the Document Entity to extract FPI.
 sub preparse_doctype
 {
-	my $File = shift;
-	
-	#
-	# Reset DOCTYPE, Root (for second invocation, probably not needed anymore).
-	$File->{DOCTYPE} = '';
-	$File->{Root}    = '';
-	
-	my $dtd = sub {
-                return if $File->{Root};
-                
-                # TODO: The \s and \w are probably wrong now that the strings are
-                # utf8_on
-                my $declaration = shift;
-                my $doctype_type;
-                my $doctype_secondpart;
-                if ($declaration =~
-                	/<!DOCTYPE\s+html(?:\s+SYSTEM\s+(['"])about:legacy-compat\1)?\s*>/si
-                	)
-                {
-                	$File->{Root}    = "html";
-                	$File->{DOCTYPE} = "HTML5";
-                }
-                elsif ($declaration =~
-                	m(<!DOCTYPE\s+(\w[\w\.-]+)\s+(PUBLIC|SYSTEM)\s+(?:[\'\"])([^\"\']+)(?:[\"\'])(.*)>)si
-                		)
-                		{
-                		(   $File->{Root},    $doctype_type,
-                		$File->{DOCTYPE}, $doctype_secondpart
-                		) = ($1, $2, $3, $4);
-                		if (($doctype_type eq "PUBLIC") and
-                		(($doctype_secondpart) =
-                		$doctype_secondpart =~
-                		m(\s+(?:[\'\"])([^\"\']+)(?:[\"\']).*)si)
-                		)
-                		{
-                		&match_DTD_FPI_SI($File, $File->{DOCTYPE},
-                		$doctype_secondpart);
-                		}
-                		}
-                		};
-                		
-                		my $start = sub {
-                		my ($p, $tag, $attr) = @_;
-                		
-                		if ($File->{Root}) {
-                		return unless $tag eq $File->{Root};
-                		}
-                		else {
-                		$File->{Root} = $tag;
-                		}
-                		if ($attr->{xmlns}) {
-                		$File->{Namespace} = $attr->{xmlns};
-                		}
-                		if ($attr->{version}) {
-                		$File->{'Root Version'} = $attr->{version};
-                		}
-                		if ($attr->{baseProfile}) {
-                		$File->{'Root BaseProfile'} = $attr->{baseProfile};
-                		}
-                		
-                		# We're done parsing.
-                		$p->eof();
-                		};
-                		
-                		# we use HTML::Parser as pre-parser. May use html5lib or other in the future
-                		my $p = HTML::Parser->new(api_version => 3);
-                		
-                		# if content-type has shown we should pre-parse with XML mode, use that
-                		# otherwise (mostly text/html cases) use default mode
-                		$p->xml_mode(&is_xml($File));
-                		$p->handler(declaration => $dtd,   'text');
-                		$p->handler(start       => $start, 'self,tag,attr');
-                		
-                		my $line = 0;
-                		my $max  = scalar(@{$File->{Content}});
-                		$p->parse(
-                		sub {
-                		return ($line < $max) ? $File->{Content}->[$line++] . "\n" : undef;
-                		}
-                		);
-                		$p->eof();
-                		
-                		# TODO: These \s here are probably wrong now that the strings are utf8_on
-                		$File->{DOCTYPE} = '' unless defined $File->{DOCTYPE};
-                		$File->{DOCTYPE} =~ s(^\s+){ }g;
-                		$File->{DOCTYPE} =~ s(\s+$){ }g;
-                		$File->{DOCTYPE} =~ s(\s+) { }g;
-                		
-                		# Some document types actually need no doctype to be identified,
-                		# root element and some version attribute is enough
-                		# TODO applicable doctypes should be migrated to a config file?
-                		
-                		# if (($File->{DOCTYPE} eq '') and ($File->{Root} eq "svg") ) {
-                		#   if (($File->{'Root Version'}) or ($File->{'Root BaseProfile'}))
-                		#   {
-                		#     if (! $File->{'Root Version'}) { $File->{'Root Version'} = "0"; }
-                		#     if (! $File->{'Root BaseProfile'}) { $File->{'Root BaseProfile'} = "0"; }
-                		#     if ($File->{'Root Version'} eq "1.0"){
-                		#       $File->{DOCTYPE} = "-//W3C//DTD SVG 1.0//EN";
-                		#       $File->{"DOCTYPEless OK"} = TRUE;
-                		#       $File->{Opt}->{DOCTYPE} = "SVG 1.0";
-                		#     }
-                		#     if ((($File->{'Root Version'} eq "1.1") or ($File->{'Root Version'} eq "0")) and ($File->{'Root BaseProfile'} eq "tiny")) {
-                		#         $File->{DOCTYPE} = "-//W3C//DTD SVG 1.1 Tiny//EN";
-                		#         $File->{"DOCTYPEless OK"} = TRUE;
-                		#         $File->{Opt}->{DOCTYPE} = "SVG 1.1 Tiny";
-                		#     }
-                		#     elsif ((($File->{'Root Version'} eq "1.1")  or ($File->{'Root Version'} eq "0")) and ($File->{'Root BaseProfile'} eq "basic")) {
-                		#         $File->{DOCTYPE} = "-//W3C//DTD SVG 1.1 Basic//EN";
-                		#         $File->{Opt}->{DOCTYPE} = "SVG 1.1 Basic";
-                		#         $File->{"DOCTYPEless OK"} = TRUE;
-                		#     }
-                		#     elsif (($File->{'Root Version'} eq "1.1") and (!$File->{'Root BaseProfile'})) {
-                		#         $File->{DOCTYPE} = "-//W3C//DTD SVG 1.1//EN";
-                		#         $File->{Opt}->{DOCTYPE} = "SVG 1.1";
-                		#         $File->{"DOCTYPEless OK"} = TRUE;
-                		#     }
-                		#     if ($File->{'Root Version'} eq "0") { $File->{'Root Version'} = undef; }
-                		#     if ($File->{'Root BaseProfile'} eq "0") { $File->{'Root BaseProfile'} = undef; }
-                		#   }
-                		#   else {
-                		#     # by default for an svg root elt, we use SVG 1.1
-                		#     $File->{DOCTYPE} = "-//W3C//DTD SVG 1.1//EN";
-                		#     $File->{Opt}->{DOCTYPE} = "SVG 1.1";
-                		#     $File->{"DOCTYPEless OK"} = TRUE;
-                		#   }
-                		# }
-                		if (($File->{"DOCTYPEless OK"}) and ($File->{Opt}->{DOCTYPE})) {
-                		
-                		# doctypeless document type found, we fake the override
-                		# so that the parser will have something to validate against
-                		$File = &override_doctype($File);
-                		}
-                		return $File;
-                		}
-                		
-                		#
-                		# Preprocess CGI parameters.
-                		sub prepCGI
-                		{
-                		my $File = shift;
-                		my $q    = shift;
-                		
-                		# The URL to this CGI script.
-                		$File->{Env}->{'Self URI'} = $q->url();
-                		
-                		# Decode parameter values, set booleans the way we expect them.
-                		foreach my $param ($q->param()) {
-                		
-                		# 'uploaded_file' and 'fragment' contain data we treat as is.
-                		next if ($param eq 'uploaded_file' || $param eq 'fragment');
-                		
-                		# Decode all other defined values as UTF-8.
-                		my @values = map { Encode::decode_utf8($_) } $q->param($param);
-                		$q->param($param, @values);
-                		
-                		# Skip parameters that should not be treated as booleans.
-                		next if $param =~ /^(?:accept(?:-(?:language|charset))?|ur[il])$/;
-                		
-                		# Keep false-but-set params.
-                		next if $q->param($param) eq '0';
-                		
-                		# Parameters that are given to us without specifying a value get set
-                		# to a true value.
-                		$q->param($param, TRUE) unless $q->param($param);
-                		}
-                		
-                		$File->{Env}->{'Home Page'} =
-                		URI->new_abs(".", $File->{Env}->{'Self URI'});
-                		
-                		# Use "url" unless a "uri" was also given.
-                		if ($q->param('url') and not $q->param('uri')) {
-                		$q->param('uri', $q->param('url'));
-                		}
-                		
-                		# Set output mode; needed in get_error_template if we end up there.
-                		$File->{Opt}->{Output} = $q->param('output') || 'html';
-                		
-                		# Issue a redirect for uri=referer.
-                		if ($q->param('uri') and $q->param('uri') eq 'referer') {
-                		if ($q->referer) {
-                		$q->param('uri', $q->referer);
-                		$q->param('accept', $q->http('Accept')) if ($q->http('Accept'));
-                		$q->param('accept-language', $q->http('Accept-Language'))
-                		if ($q->http('Accept-Language'));
-                		$q->param('accept-charset', $q->http('Accept-Charset'))
-                		if ($q->http('Accept-Charset'));
-                		print redirect(-uri => &self_url_q($q, $File), -vary => 'Referer');
-                		exit;
-                		}
-                		else {
-                		
-                		# No Referer header was found.
-                		$File->{'Error Flagged'} = TRUE;
-                		#&get_error_template($File)->param(fatal_referer_error => TRUE);
-                		}
-                		}
-                		
-                		# Supersede URL with an uploaded file.
-                		if ($q->param('uploaded_file')) {
-                		$q->param('uri', 'upload://' . $q->param('uploaded_file'));
-                		$File->{'Is Upload'} = TRUE;    # Tag it for later use.
-                		}
-                		
-                		# Supersede URL with an uploaded fragment.
-                		if ($q->param('fragment')) {
-                		$q->param('uri', 'upload://Form Submission');
-                		$File->{'Direct Input'} = TRUE;    # Tag it for later use.
-                		}
-                		
-                		# Redirect to a GETable URL if method is POST without a file upload.
-                		if (defined $q->request_method and
-                		$q->request_method eq 'POST' and
-                		not($File->{'Is Upload'} or $File->{'Direct Input'}))
-                		{
-                		my $thispage = &self_url_q($q, $File);
-                		print redirect $thispage;
-                		exit;
-                		}
-                		
-                		#
-                		# Flag an error if we didn't get a file to validate.
-                		unless ($q->param('uri')) {
-                		$File->{'Error Flagged'} = TRUE;
-                		#my $tmpl = &get_error_template($File);
-                		#$tmpl->param(fatal_uri_error  => TRUE);
-                		#$tmpl->param(fatal_uri_scheme => 'undefined');
-                		}
-                		
-                		return $q;
-                		}
-                		
-                		#
-                		# Set parse mode (SGML or XML) based on a number of preparsed factors:
-                		# * HTTP Content-Type
-                		# * Doctype Declaration
-                		# * XML Declaration
-                		# * XML namespaces
-                		sub set_parse_mode
-                		{
-                		my $File = shift;
-                		my $CFG  = shift;
-                		my $fpi  = $File->{DOCTYPE};
-                		$File->{ModeChoice} = '';
-                		my $parseModeFromDoctype = $CFG->{Types}->{$fpi}->{'Parse Mode'} || 'TBD';
-                		
-                		my $xmlws = qr/[\x20\x09\x0D\x0A]/o;
-                		
-                		# $File->{Mode} may have been set in parse_content_type
-                		# and it would come from the Media Type
-                		my $parseModeFromMimeType = $File->{Mode};
-                		my $begincontent          = join "\x20",
-                		@{$File->{Content}};    # for the sake of xml decl detection,
-                		# the 10 first lines should be safe
-                		my $parseModeFromXMLDecl = (
-                		$begincontent =~
-                		/^ ${xmlws}*                # whitespace before the decl should not be happening
-                		# but we are greedy for the sake of detection, not validation
-                		<\?xml ${xmlws}+                  # start matching an XML Declaration
-                		version ${xmlws}* =               # for documents, version info is mandatory
-                		${xmlws}* (["'])1.[01]\1          # hardcoding the existing XML versions.
-                		# Maybe we should use \d\.\d
-                		(?:${xmlws}+ encoding
-                		${xmlws}* = ${xmlws}*
-                		(["'])[A-Za-z][a-zA-Z0-9_-]+\2
-                		)?                                # encoding info is optional
-                	(?:${xmlws}+ standalone
-                		${xmlws}* = ${xmlws}*
-                		(["'])(?:yes|no)\3
-                			)?                                # ditto standalone info, optional
-                			${xmlws}* \?>                     # end of XML Declaration
-                			/ox
-                			?
-                			'XML' :
-                			'TBD'
-                			);
-                			
-                			my $parseModeFromNamespace = 'TBD';
-                			# http://www.w3.org/Bugs/Public/show_bug.cgi?id=9967
-                			$parseModeFromNamespace = 'XML'
-                			if ($File->{Namespace} && $parseModeFromDoctype ne 'HTML5');
-                			
-                			if (($parseModeFromMimeType eq 'TBD') and
-                			($parseModeFromXMLDecl   eq 'TBD') and
-                			($parseModeFromNamespace eq 'TBD') and
-                			(!exists $CFG->{Types}->{$fpi}))
-                			{
-                			
-                			# if the mime type is text/html (ambiguous, hence TBD mode)
-                			# and the doctype isn't in the catalogue
-                			# and XML prolog detection was unsuccessful
-                			# and we found no namespace at the root
-                			# ... throw in a warning
-                			&add_warning(
-                			'W06',
-                			{   W06_mime    => $File->{ContentType},
-                			w06_doctype => $File->{DOCTYPE}
-                			}
-                			);
-                			return;
-                			}
-                			
-                			$parseModeFromDoctype = 'TBD'
-                			unless $parseModeFromDoctype eq 'SGML' or
-                			$parseModeFromDoctype eq 'HTML5' or
-                			$parseModeFromDoctype eq 'XML'   or
-                			$parseModeFromNamespace eq 'XML';
-                			
-                			if (($parseModeFromDoctype eq 'TBD') and
-                			($parseModeFromXMLDecl  eq 'TBD') and
-                			($parseModeFromMimeType eq 'TBD') and
-                			($parseModeFromNamespace eq 'TBD'))
-                			{
-                			
-                			# if all factors are useless to give us a parse mode
-                			# => we use SGML-based DTD validation as a default
-                			$File->{Mode}       = 'DTD+SGML';
-                			$File->{ModeChoice} = 'Fallback';
-                			
-                			# and send warning about the fallback
-                			&add_warning(
-                			'W06',
-                			{   W06_mime    => $File->{ContentType},
-                			w06_doctype => $File->{DOCTYPE}
-                			}
-                			);
-                			return;
-                			}
-                			
-                			if ($parseModeFromMimeType ne 'TBD') {
-                			
-                			# if The mime type gives clear indication of whether the document is
-                			# XML or not
-                			if (($parseModeFromDoctype ne 'TBD') and
-                			($parseModeFromDoctype ne 'HTML5') and
-                			($parseModeFromMimeType ne $parseModeFromDoctype))
-                			{
-                			
-                			# if document-type recommended mode and content-type recommended
-                			# mode clash, shoot a warning
-                			# unknown doctypes will not trigger this
-                			# neither will html5 documents, which can be XML or not
-                			&add_warning(
-                			'W07',
-                			{   W07_mime => $File->{ContentType},
-                			W07_ct   => $parseModeFromMimeType,
-                			W07_dtd  => $parseModeFromDoctype,
-                			}
-                			);
-                			}
-                			
-                			# mime type has precedence, we stick to it
-                			$File->{ModeChoice} = 'Mime';
-                			if ($parseModeFromDoctype eq "HTML5") {
-                			$File->{Mode} = 'HTML5+' . $File->{Mode};
-                			}
-                			else {
-                			$File->{Mode} = 'DTD+' . $File->{Mode};
-                			}
-                			return;
-                			}
-                			
-                			if ($parseModeFromDoctype ne 'TBD') {
-                			
-                			# the mime type is ambiguous (hence we didn't stop at the previous test)
-                			# but by now we're sure that the document type is a good indication
-                			# so we use that.
-                			if ($parseModeFromDoctype eq "HTML5") {
-                			if ($parseModeFromXMLDecl eq "XML" or
-                			$parseModeFromNamespace eq "XML")
-                			{
-                			$File->{Mode} = "HTML5+XML";
-                			}
-                			else {
-                			$File->{Mode} = "HTML5";
-                			}
-                			}
-                			else {    # not HTML5
-                			$File->{Mode} = "DTD+" . $parseModeFromDoctype;
-                			}
-                			$File->{ModeChoice} = 'Doctype';
-                			return;
-                			}
-                			
-                			if ($parseModeFromXMLDecl ne 'TBD') {
-                			
-                			# the mime type is ambiguous (hence we didn't stop at the previous test)
-                			# and so was the doctype
-                			# but we found an XML declaration so we use that.
-                			if ($File->{Mode} eq "") {
-                			$File->{Mode} = "DTD+" . $parseModeFromXMLDecl;
-                			}
-                			elsif ((my $ix = index($File->{Mode}, '+')) != -1) {
-                			substr($File->{Mode}, $ix + 1) = $parseModeFromXMLDecl;
-                			}
-                			else {
-                			$File->{Mode} = $File->{Mode} . "+" . $parseModeFromXMLDecl;
-                			}
-                			$File->{ModeChoice} = 'XMLDecl';
-                			return;
-                			}
-                			
-                			# this is the last case. We know that all  modes are not TBD,
-                			# yet mime type, doctype AND XML DECL tests have failed => we are saved
-                			# by the presence of namespaces
-                			if ($File->{Mode} eq "") {
-                			$File->{Mode} = "DTD+" . $parseModeFromNamespace;
-                			}
-                			elsif ((my $ix = index($File->{Mode}, '+')) != -1) {
-                			substr($File->{Mode}, $ix + 1) = $parseModeFromNamespace;
-                			}
-                			else {
-                			$File->{Mode} = $File->{Mode} . "+" . $parseModeFromNamespace;
-                			}
-                			$File->{ModeChoice} = 'Namespace';
-                			}
-                			
-                			#
-                			# Utility sub to tell if mode "is" XML.
-                			sub is_xml
-                			{
-                			index(shift->{Mode}, 'XML') != -1;
-                			}
-                			
-                			#
-                			# Check charset conflicts and add any warnings necessary.
-                			sub charset_conflicts
-                			{
-                			my $File = shift;
-                			
-                			#
-                			# Handle the case where there was no charset to be found.
-                			unless ($File->{Charset}->{Use}) {
-                			&add_warning('W17', {});
-                			$File->{Tentative} |= T_WARN;
-                			}
-                			
-                			#
-                			# Add a warning if there was charset info conflict (HTTP header,
-                			# XML declaration, or <meta> element).
-                			# filtering out some of the warnings in direct input mode where HTTP
-                			# encoding is a "fake"
-                			if ((   charset_not_equal(
-                			$File->{Charset}->{HTTP},
-                			$File->{Charset}->{XML}
-                			)
-                			) 
-                			{
-                			&add_warning(
-                			'W18',
-                			{   W18_http => $File->{Charset}->{HTTP},
-                			W18_xml  => $File->{Charset}->{XML},
-                			W18_use  => $File->{Charset}->{Use},
-                			}
-                			);
-                			}
-                			elsif (
-                			charset_not_equal($File->{Charset}->{HTTP}, $File->{Charset}->{META})
-                			
-                			{
-                			&add_warning(
-                			'W19',
-                			{   W19_http => $File->{Charset}->{HTTP},
-                			W19_meta => $File->{Charset}->{META},
-                			W19_use  => $File->{Charset}->{Use},
-                			}
-                			);
-                			}
-                			elsif (
-                			charset_not_equal($File->{Charset}->{XML}, $File->{Charset}->{META}))
-                			{
-                			&add_warning(
-                			'W20',
-                			{   W20_http => $File->{Charset}->{XML},
-                			W20_xml  => $File->{Charset}->{META},
-                			}
-                			);
-                			$File->{Tentative} |= T_WARN;
-                			}
-                			
-                			return $File;
-                			}
-                			
-                			#
-                			# Transcode to UTF-8
-                			sub transcode
-                			{
-                			my $File = shift;
-                			
-                			my $general_charset = $File->{Charset}->{Use};
-                			my $exact_charset   = $general_charset;
-                			
-                			# TODO: This should be done before transcode()
-                			if ($general_charset eq 'utf-16') {
-                			if ($File->{Charset}->{Auto} =~ m/^utf-16[bl]e$/) {
-                			$exact_charset = $File->{Charset}->{Auto};
-                			}
-                			else { $exact_charset = 'utf-16be'; }
-                			}
-                			
-                			my $cs = $exact_charset;
-                			
-                			if ($CFG->{Charsets}->{$cs}) {
-                			if (index($CFG->{Charsets}->{$cs}, 'ERR ') != -1) {
-                			
-                			# The encoding is not supported due to policy
-                			
-                			$File->{'Error Flagged'} = TRUE;
-                			#my $tmpl = &get_error_template($File);
-                			#$tmpl->param(fatal_transcode_error   => TRUE);
-                			#$tmpl->param(fatal_transcode_charset => $cs);
-                			
-                			# @@FIXME might need better text
-                			#$tmpl->param(fatal_transcode_errmsg =>
-                			#'This encoding is not supported by the validator.');
-                			return $File;
-                			}
-                			elsif (index($CFG->{Charsets}->{$cs}, 'X ') != -1) {
-                			
-                			# possibly problematic, we recommend another alias
-                			my $recommended_charset = $CFG->{Charsets}->{$cs};
-                			$recommended_charset =~ s/X //;
-                			&add_warning(
-                			'W22',
-                			{   W22_declared  => $cs,
-                			W22_suggested => $recommended_charset,
-                			}
-                			);
-                			}
-                			}
-                			
-                			# Does the system support decoding this encoding?
-                			my $enc = Encode::find_encoding($cs);
-                			
-                			if (!$enc) {
-                			
-                			# This system's Encode installation does not support
-                			# the character encoding; might need additional modules
-                			
-                			$File->{'Error Flagged'} = TRUE;
-                			#my $tmpl = &get_error_template($File);
-                			#$tmpl->param(fatal_transcode_error   => TRUE);
-                			#$tmpl->param(fatal_transcode_charset => $cs);
-                			
-                			# @@FIXME might need better text
-                			#$tmpl->param(fatal_transcode_errmsg => 'Encoding not supported.');
-                			return $File;
-                			}
-                			elsif (!$CFG->{Charsets}->{$cs}) {
-                			
-                			# not in the list, but technically OK -> we warn
-                			&add_warning('W24', {W24_declared => $cs,});
-                			
-                			}
-                			
-                			my $output;
-                			my $input = $File->{Bytes};
-                			my $err      = {};
-                			
-                			# Try to transcode
-                			eval { $output = $enc->decode($input, Encode::FB_CROAK); };
-                			
-                			if ($@) {
-                			eval { $output = $enc->decode($input, Encode::FB_DEFAULT); };
-                			#$err->{msg} => 'more then one encoding';
-                			#push @{$File->{Errors}}, $err;
-                			
-                			}
-                			#$err->{msg} => 'more then one encoding';
-                			#push @{$File->{Errors}}, $err;
-                			
-                			# @@FIXME is this what we want?
-                			$output =~ s/\015?\012/\n/g;
-                			
-                			# make sure we deal only with unix newlines
-                			# tentative fix for http://www.w3.org/Bugs/Public/show_bug.cgi?id=3992
-                			$output =~ s/(\r\n|\n|\r)/\n/g;
-                			
-                			#debug: we could check if the content has utf8 bit on with
-                			#$output= utf8::is_utf8($output) ? 1 : 0;
-                			$File->{Content} = [split /\n/, $output];
-                			
-                			return $File;
-                			}
-                			
-                			sub find_encodings
-                			{
-                			my $File  = shift;
-                			my $bom   = HTML::Encoding::encoding_from_byte_order_mark($File->{Bytes});
-                			my @first = HTML::Encoding::encoding_from_first_chars($File->{Bytes});
-                			
-                			if (defined $bom) {
-                			
-                			# @@FIXME this BOM entry should not be needed at all!
-                			$File->{BOM} = length(Encode::encode($bom, "\x{FEFF}"));
-                			$File->{Charset}->{Auto} = lc $bom;
-                			}
-                			else {
-                			$File->{Charset}->{Auto} = lc($first[0]) if @first;
-                			}
-                			
-                			my $xml = HTML::Encoding::encoding_from_xml_document($File->{Bytes});
-                			$File->{Charset}->{XML} = lc $xml if defined $xml;
-                			
-                			my %metah;
-                			foreach my $try (@first) {
-                			
-                			# @@FIXME I think the old code used HTML::Parser xml mode, check if ok
-                			my $meta =
-                			HTML::Encoding::encoding_from_meta_element($File->{Bytes}, $try);
-                			$metah{lc($meta)}++ if defined $meta and length $meta;
-                			}
-                			
-                			if (!%metah) {
-                			
-                			# HTML::Encoding doesn't support HTML5 <meta charset> as of 0.60,
-                			# check it ourselves.  HTML::HeadParser >= 3.60 is required for this.
-                			
-                			my $hp           = HTML::HeadParser->new();
-                			my $seen_doctype = FALSE;
-                			my $is_html5     = FALSE;
-                			$hp->handler(
-                			declaration => sub {
-                			my ($tag, $text) = @_;
-                			return if ($seen_doctype || uc($tag) ne '!DOCTYPE');
-                			$seen_doctype = TRUE;
-                			$is_html5     = TRUE
-                			if (
-                			$text =~ /<!DOCTYPE\s+html
-                			(\s+SYSTEM\s+(['"])about:legacy-compat\2)?
-                	\s*>/six
-                	);
-        },
-        'tag,text'
-        );
-        $hp->parse($File->{Bytes});
-        if ($is_html5) {
-                my $cs = $hp->header('X-Meta-Charset');
-                $metah{lc($cs)}++ if (defined($cs) && length($cs));
+    my $File = shift;
+
+    #
+    # Reset DOCTYPE, Root (for second invocation, probably not needed anymore).
+    $File->{DOCTYPE} = '';
+    $File->{Root}    = '';
+
+    my $dtd = sub {
+        return if $File->{Root};
+
+        # TODO: The \s and \w are probably wrong now that the strings are
+        # utf8_on
+        my $declaration = shift;
+        my $doctype_type;
+        my $doctype_secondpart;
+        if ($declaration =~
+            /<!DOCTYPE\s+html(?:\s+SYSTEM\s+(['"])about:legacy-compat\1)?\s*>/si
+            )
+        {
+            $File->{Root}    = "html";
+            $File->{DOCTYPE} = "HTML5";
         }
+        elsif ($declaration =~
+            m(<!DOCTYPE\s+(\w[\w\.-]+)\s+(PUBLIC|SYSTEM)\s+(?:[\'\"])([^\"\']+)(?:[\"\'])(.*)>)si
+            )
+        {
+            (   $File->{Root},    $doctype_type,
+                $File->{DOCTYPE}, $doctype_secondpart
+            ) = ($1, $2, $3, $4);
+            if (($doctype_type eq "PUBLIC") and
+                (($doctype_secondpart) =
+                    $doctype_secondpart =~
+                    m(\s+(?:[\'\"])([^\"\']+)(?:[\"\']).*)si)
+                )
+            {
+                &match_DTD_FPI_SI($File, $File->{DOCTYPE},
+                    $doctype_secondpart);
+            }
+        }
+    };
+
+    my $start = sub {
+        my ($p, $tag, $attr) = @_;
+
+        if ($File->{Root}) {
+            return unless $tag eq $File->{Root};
+        }
+        else {
+            $File->{Root} = $tag;
+        }
+        if ($attr->{xmlns}) {
+            $File->{Namespace} = $attr->{xmlns};
+        }
+        if ($attr->{version}) {
+            $File->{'Root Version'} = $attr->{version};
+        }
+        if ($attr->{baseProfile}) {
+            $File->{'Root BaseProfile'} = $attr->{baseProfile};
+        }
+
+        # We're done parsing.
+        $p->eof();
+    };
+
+    # we use HTML::Parser as pre-parser. May use html5lib or other in the future
+    my $p = HTML::Parser->new(api_version => 3);
+
+    # if content-type has shown we should pre-parse with XML mode, use that
+    # otherwise (mostly text/html cases) use default mode
+    $p->xml_mode(&is_xml($File));
+    $p->handler(declaration => $dtd,   'text');
+    $p->handler(start       => $start, 'self,tag,attr');
+
+    my $line = 0;
+    my $max  = scalar(@{$File->{Content}});
+    $p->parse(
+        sub {
+            return ($line < $max) ? $File->{Content}->[$line++] . "\n" : undef;
+        }
+    );
+    $p->eof();
+
+    # TODO: These \s here are probably wrong now that the strings are utf8_on
+    $File->{DOCTYPE} = '' unless defined $File->{DOCTYPE};
+    $File->{DOCTYPE} =~ s(^\s+){ }g;
+    $File->{DOCTYPE} =~ s(\s+$){ }g;
+    $File->{DOCTYPE} =~ s(\s+) { }g;
+
+    # Some document types actually need no doctype to be identified,
+    # root element and some version attribute is enough
+    # TODO applicable doctypes should be migrated to a config file?
+
+    # if (($File->{DOCTYPE} eq '') and ($File->{Root} eq "svg") ) {
+    #   if (($File->{'Root Version'}) or ($File->{'Root BaseProfile'}))
+    #   {
+    #     if (! $File->{'Root Version'}) { $File->{'Root Version'} = "0"; }
+    #     if (! $File->{'Root BaseProfile'}) { $File->{'Root BaseProfile'} = "0"; }
+    #     if ($File->{'Root Version'} eq "1.0"){
+    #       $File->{DOCTYPE} = "-//W3C//DTD SVG 1.0//EN";
+    #       $File->{"DOCTYPEless OK"} = TRUE;
+    #       $File->{Opt}->{DOCTYPE} = "SVG 1.0";
+    #     }
+    #     if ((($File->{'Root Version'} eq "1.1") or ($File->{'Root Version'} eq "0")) and ($File->{'Root BaseProfile'} eq "tiny")) {
+    #         $File->{DOCTYPE} = "-//W3C//DTD SVG 1.1 Tiny//EN";
+    #         $File->{"DOCTYPEless OK"} = TRUE;
+    #         $File->{Opt}->{DOCTYPE} = "SVG 1.1 Tiny";
+    #     }
+    #     elsif ((($File->{'Root Version'} eq "1.1")  or ($File->{'Root Version'} eq "0")) and ($File->{'Root BaseProfile'} eq "basic")) {
+    #         $File->{DOCTYPE} = "-//W3C//DTD SVG 1.1 Basic//EN";
+    #         $File->{Opt}->{DOCTYPE} = "SVG 1.1 Basic";
+    #         $File->{"DOCTYPEless OK"} = TRUE;
+    #     }
+    #     elsif (($File->{'Root Version'} eq "1.1") and (!$File->{'Root BaseProfile'})) {
+    #         $File->{DOCTYPE} = "-//W3C//DTD SVG 1.1//EN";
+    #         $File->{Opt}->{DOCTYPE} = "SVG 1.1";
+    #         $File->{"DOCTYPEless OK"} = TRUE;
+    #     }
+    #     if ($File->{'Root Version'} eq "0") { $File->{'Root Version'} = undef; }
+    #     if ($File->{'Root BaseProfile'} eq "0") { $File->{'Root BaseProfile'} = undef; }
+    #   }
+    #   else {
+    #     # by default for an svg root elt, we use SVG 1.1
+    #     $File->{DOCTYPE} = "-//W3C//DTD SVG 1.1//EN";
+    #     $File->{Opt}->{DOCTYPE} = "SVG 1.1";
+    #     $File->{"DOCTYPEless OK"} = TRUE;
+    #   }
+    # }
+    if (($File->{"DOCTYPEless OK"}) and ($File->{Opt}->{DOCTYPE})) {
+
+        # doctypeless document type found, we fake the override
+        # so that the parser will have something to validate against
+        $File = &override_doctype($File);
+    }
+    return $File;
 }
 
-if (%metah) {
-	my @meta = sort { $metah{$b} <=> $metah{$a} } keys %metah;
-	$File->{Charset}->{META} = $meta[0];
+#
+# Preprocess CGI parameters.
+sub prepCGI
+{
+    my $File = shift;
+    my $q    = shift;
+
+    # The URL to this CGI script.
+    $File->{Env}->{'Self URI'} = $q->url();
+
+    # Decode parameter values, set booleans the way we expect them.
+    foreach my $param ($q->param()) {
+
+        # 'uploaded_file' and 'fragment' contain data we treat as is.
+        next if ($param eq 'uploaded_file' || $param eq 'fragment');
+
+        # Decode all other defined values as UTF-8.
+        my @values = map { Encode::decode_utf8($_) } $q->param($param);
+        $q->param($param, @values);
+
+        # Skip parameters that should not be treated as booleans.
+        next if $param =~ /^(?:accept(?:-(?:language|charset))?|ur[il])$/;
+
+        # Keep false-but-set params.
+        next if $q->param($param) eq '0';
+
+        # Parameters that are given to us without specifying a value get set
+        # to a true value.
+        $q->param($param, TRUE) unless $q->param($param);
+    }
+
+    $File->{Env}->{'Home Page'} =
+        URI->new_abs(".", $File->{Env}->{'Self URI'});
+
+    # Use "url" unless a "uri" was also given.
+    if ($q->param('url') and not $q->param('uri')) {
+        $q->param('uri', $q->param('url'));
+    }
+
+    # Set output mode; needed in get_error_template if we end up there.
+    $File->{Opt}->{Output} = $q->param('output') || 'html';
+
+    # Issue a redirect for uri=referer.
+    if ($q->param('uri') and $q->param('uri') eq 'referer') {
+        if ($q->referer) {
+            $q->param('uri', $q->referer);
+            $q->param('accept', $q->http('Accept')) if ($q->http('Accept'));
+            $q->param('accept-language', $q->http('Accept-Language'))
+                if ($q->http('Accept-Language'));
+            $q->param('accept-charset', $q->http('Accept-Charset'))
+                if ($q->http('Accept-Charset'));
+            print redirect(-uri => &self_url_q($q, $File), -vary => 'Referer');
+            die;
+        }
+        else {
+
+            # No Referer header was found.
+            $File->{'Error Flagged'} = TRUE;
+            print "error_no_referer_header";
+            #&get_error_template($File)->param(fatal_referer_error => TRUE);
+        }
+    }
+
+    # Supersede URL with an uploaded file.
+    if ($q->param('uploaded_file')) {
+        $q->param('uri', 'upload://' . $q->param('uploaded_file'));
+        $File->{'Is Upload'} = TRUE;    # Tag it for later use.
+    }
+
+    # Supersede URL with an uploaded fragment.
+    if ($q->param('fragment')) {
+        $q->param('uri', 'upload://Form Submission');
+        $File->{'Direct Input'} = TRUE;    # Tag it for later use.
+    }
+
+    # Redirect to a GETable URL if method is POST without a file upload.
+    if (defined $q->request_method and
+        $q->request_method eq 'POST' and
+        not($File->{'Is Upload'} or $File->{'Direct Input'}))
+    {
+        my $thispage = &self_url_q($q, $File);
+        print redirect $thispage;
+        die;
+    }
+
+    #
+    # Flag an error if we didn't get a file to validate.
+    unless ($q->param('uri')) {
+        $File->{'Error Flagged'} = TRUE;
+        print "error_no_file";
+        #my $tmpl = &get_error_template($File);
+        #$tmpl->param(fatal_uri_error  => TRUE);
+        #$tmpl->param(fatal_uri_scheme => 'undefined');
+    }
+
+    return $q;
 }
 
-return $File;
+#
+# Set parse mode (SGML or XML) based on a number of preparsed factors:
+# * HTTP Content-Type
+# * Doctype Declaration
+# * XML Declaration
+# * XML namespaces
+sub set_parse_mode
+{
+    my $File = shift;
+    my $CFG  = shift;
+    my $fpi  = $File->{DOCTYPE};
+    $File->{ModeChoice} = '';
+    my $parseModeFromDoctype = $CFG->{Types}->{$fpi}->{'Parse Mode'} || 'TBD';
+
+    my $xmlws = qr/[\x20\x09\x0D\x0A]/o;
+
+    # $File->{Mode} may have been set in parse_content_type
+    # and it would come from the Media Type
+    my $parseModeFromMimeType = $File->{Mode};
+    my $begincontent          = join "\x20",
+        @{$File->{Content}};    # for the sake of xml decl detection,
+                                # the 10 first lines should be safe
+    my $parseModeFromXMLDecl = (
+        $begincontent =~
+            /^ ${xmlws}*                # whitespace before the decl should not be happening
+                                        # but we are greedy for the sake of detection, not validation
+      <\?xml ${xmlws}+                  # start matching an XML Declaration
+      version ${xmlws}* =               # for documents, version info is mandatory
+      ${xmlws}* (["'])1.[01]\1          # hardcoding the existing XML versions.
+                                        # Maybe we should use \d\.\d
+      (?:${xmlws}+ encoding
+       ${xmlws}* = ${xmlws}*
+       (["'])[A-Za-z][a-zA-Z0-9_-]+\2
+      )?                                # encoding info is optional
+      (?:${xmlws}+ standalone
+       ${xmlws}* = ${xmlws}*
+       (["'])(?:yes|no)\3
+      )?                                # ditto standalone info, optional
+      ${xmlws}* \?>                     # end of XML Declaration
+    /ox
+        ?
+            'XML' :
+            'TBD'
+    );
+
+    my $parseModeFromNamespace = 'TBD';
+    # http://www.w3.org/Bugs/Public/show_bug.cgi?id=9967
+    $parseModeFromNamespace = 'XML'
+        if ($File->{Namespace} && $parseModeFromDoctype ne 'HTML5');
+
+    if (($parseModeFromMimeType eq 'TBD') and
+        ($parseModeFromXMLDecl   eq 'TBD') and
+        ($parseModeFromNamespace eq 'TBD') and
+        (!exists $CFG->{Types}->{$fpi}))
+    {
+
+        # if the mime type is text/html (ambiguous, hence TBD mode)
+        # and the doctype isn't in the catalogue
+        # and XML prolog detection was unsuccessful
+        # and we found no namespace at the root
+        # ... throw in a warning
+        &add_warning(
+            'W06',
+            {   W06_mime    => $File->{ContentType},
+                w06_doctype => $File->{DOCTYPE}
+            }
+        );
+        return;
+    }
+
+    $parseModeFromDoctype = 'TBD'
+        unless $parseModeFromDoctype eq 'SGML' or
+            $parseModeFromDoctype eq 'HTML5' or
+            $parseModeFromDoctype eq 'XML'   or
+            $parseModeFromNamespace eq 'XML';
+
+    if (($parseModeFromDoctype eq 'TBD') and
+        ($parseModeFromXMLDecl  eq 'TBD') and
+        ($parseModeFromMimeType eq 'TBD') and
+        ($parseModeFromNamespace eq 'TBD'))
+    {
+
+        # if all factors are useless to give us a parse mode
+        # => we use SGML-based DTD validation as a default
+        $File->{Mode}       = 'DTD+SGML';
+        $File->{ModeChoice} = 'Fallback';
+
+        # and send warning about the fallback
+        &add_warning(
+            'W06',
+            {   W06_mime    => $File->{ContentType},
+                w06_doctype => $File->{DOCTYPE}
+            }
+        );
+        return;
+    }
+
+    if ($parseModeFromMimeType ne 'TBD') {
+
+        # if The mime type gives clear indication of whether the document is
+        # XML or not
+        if (($parseModeFromDoctype ne 'TBD') and
+            ($parseModeFromDoctype ne 'HTML5') and
+            ($parseModeFromMimeType ne $parseModeFromDoctype))
+        {
+
+            # if document-type recommended mode and content-type recommended
+            # mode clash, shoot a warning
+            # unknown doctypes will not trigger this
+            # neither will html5 documents, which can be XML or not
+            &add_warning(
+                'W07',
+                {   W07_mime => $File->{ContentType},
+                    W07_ct   => $parseModeFromMimeType,
+                    W07_dtd  => $parseModeFromDoctype,
+                }
+            );
+        }
+
+        # mime type has precedence, we stick to it
+        $File->{ModeChoice} = 'Mime';
+        if ($parseModeFromDoctype eq "HTML5") {
+            $File->{Mode} = 'HTML5+' . $File->{Mode};
+        }
+        else {
+            $File->{Mode} = 'DTD+' . $File->{Mode};
+        }
+        return;
+    }
+
+    if ($parseModeFromDoctype ne 'TBD') {
+
+        # the mime type is ambiguous (hence we didn't stop at the previous test)
+        # but by now we're sure that the document type is a good indication
+        # so we use that.
+        if ($parseModeFromDoctype eq "HTML5") {
+            if ($parseModeFromXMLDecl eq "XML" or
+                $parseModeFromNamespace eq "XML")
+            {
+                $File->{Mode} = "HTML5+XML";
+            }
+            else {
+                $File->{Mode} = "HTML5";
+            }
+        }
+        else {    # not HTML5
+            $File->{Mode} = "DTD+" . $parseModeFromDoctype;
+        }
+        $File->{ModeChoice} = 'Doctype';
+        return;
+    }
+
+    if ($parseModeFromXMLDecl ne 'TBD') {
+
+        # the mime type is ambiguous (hence we didn't stop at the previous test)
+        # and so was the doctype
+        # but we found an XML declaration so we use that.
+        if ($File->{Mode} eq "") {
+            $File->{Mode} = "DTD+" . $parseModeFromXMLDecl;
+        }
+        elsif ((my $ix = index($File->{Mode}, '+')) != -1) {
+            substr($File->{Mode}, $ix + 1) = $parseModeFromXMLDecl;
+        }
+        else {
+            $File->{Mode} = $File->{Mode} . "+" . $parseModeFromXMLDecl;
+        }
+        $File->{ModeChoice} = 'XMLDecl';
+        return;
+    }
+
+    # this is the last case. We know that all  modes are not TBD,
+    # yet mime type, doctype AND XML DECL tests have failed => we are saved
+    # by the presence of namespaces
+    if ($File->{Mode} eq "") {
+        $File->{Mode} = "DTD+" . $parseModeFromNamespace;
+    }
+    elsif ((my $ix = index($File->{Mode}, '+')) != -1) {
+        substr($File->{Mode}, $ix + 1) = $parseModeFromNamespace;
+    }
+    else {
+        $File->{Mode} = $File->{Mode} . "+" . $parseModeFromNamespace;
+    }
+    $File->{ModeChoice} = 'Namespace';
+}
+
+#
+# Utility sub to tell if mode "is" XML.
+sub is_xml
+{
+    index(shift->{Mode}, 'XML') != -1;
+}
+
+#
+# Check charset conflicts and add any warnings necessary.
+sub charset_conflicts
+{
+    my $File = shift;
+
+    #
+    # Handle the case where there was no charset to be found.
+    unless ($File->{Charset}->{Use}) {
+        &add_warning('W17', {});
+        $File->{Tentative} |= T_WARN;
+    }
+
+    #
+    # Add a warning if there was charset info conflict (HTTP header,
+    # XML declaration, or <meta> element).
+    # filtering out some of the warnings in direct input mode where HTTP
+    # encoding is a "fake"
+    if ((   charset_not_equal(
+                $File->{Charset}->{HTTP},
+                $File->{Charset}->{XML}
+            )
+        ) and
+        not($File->{'Direct Input'})
+        )
+    {
+        &add_warning(
+            'W18',
+            {   W18_http => $File->{Charset}->{HTTP},
+                W18_xml  => $File->{Charset}->{XML},
+                W18_use  => $File->{Charset}->{Use},
+            }
+        );
+    }
+    elsif (
+        charset_not_equal($File->{Charset}->{HTTP}, $File->{Charset}->{META})
+        and
+        not($File->{'Direct Input'}))
+    {
+        &add_warning(
+            'W19',
+            {   W19_http => $File->{Charset}->{HTTP},
+                W19_meta => $File->{Charset}->{META},
+                W19_use  => $File->{Charset}->{Use},
+            }
+        );
+    }
+    elsif (
+        charset_not_equal($File->{Charset}->{XML}, $File->{Charset}->{META}))
+    {
+        &add_warning(
+            'W20',
+            {   W20_http => $File->{Charset}->{XML},
+                W20_xml  => $File->{Charset}->{META},
+            }
+        );
+        $File->{Tentative} |= T_WARN;
+    }
+
+    return $File;
+}
+
+#
+# Transcode to UTF-8
+sub transcode
+{
+    my $File = shift;
+
+    my $general_charset = $File->{Charset}->{Use};
+    my $exact_charset   = $general_charset;
+
+    # TODO: This should be done before transcode()
+    if ($general_charset eq 'utf-16') {
+        if ($File->{Charset}->{Auto} =~ m/^utf-16[bl]e$/) {
+            $exact_charset = $File->{Charset}->{Auto};
+        }
+        else { $exact_charset = 'utf-16be'; }
+    }
+
+    my $cs = $exact_charset;
+
+    if ($CFG->{Charsets}->{$cs}) {
+        if (index($CFG->{Charsets}->{$cs}, 'ERR ') != -1) {
+
+            # The encoding is not supported due to policy
+
+            $File->{'Error Flagged'} = TRUE;
+            print "error_encoding_unsupported";
+            #my $tmpl = &get_error_template($File);
+            #$tmpl->param(fatal_transcode_error   => TRUE);
+            #$tmpl->param(fatal_transcode_charset => $cs);
+
+            # @@FIXME might need better text
+            #$tmpl->param(fatal_transcode_errmsg =>
+                    #'This encoding is not supported by the validator.');
+            return $File;
+        }
+        elsif (index($CFG->{Charsets}->{$cs}, 'X ') != -1) {
+
+            # possibly problematic, we recommend another alias
+            my $recommended_charset = $CFG->{Charsets}->{$cs};
+            $recommended_charset =~ s/X //;
+            &add_warning(
+                'W22',
+                {   W22_declared  => $cs,
+                    W22_suggested => $recommended_charset,
+                }
+            );
+        }
+    }
+
+    # Does the system support decoding this encoding?
+    
+    my $enc = Encode::find_encoding($cs);
+    
+    if (!$enc) {
+
+        # This system's Encode installation does not support
+        # the character encoding; might need additional modules
+
+        $File->{'Error Flagged'} = TRUE;
+        print "error_encoding";
+        #my $tmpl = &get_error_template($File);
+        #$tmpl->param(fatal_transcode_error   => TRUE);
+        #$tmpl->param(fatal_transcode_charset => $cs);
+
+        # @@FIXME might need better text
+        #$tmpl->param(fatal_transcode_errmsg => 'Encoding not supported.');
+        return $File;
+    }
+    elsif (!$CFG->{Charsets}->{$cs}) {
+
+        # not in the list, but technically OK -> we warn
+        &add_warning('W24', {W24_declared => $cs,});
+
+    }
+
+    my $output;
+    my $input = $File->{Bytes};
+    my $err      = {};
+
+    # Try to transcode
+    eval { $output = $enc->decode($input, Encode::FB_CROAK); };
+
+    if ($@) {
+    eval { $output = $enc->decode($input, Encode::FB_DEFAULT); };
+    #$err->{msg} => 'more then one encoding';
+    #push @{$File->{Errors}}, $err;
+    
+    }
+    #$err->{msg} => 'more then one encoding';
+    #push @{$File->{Errors}}, $err;
+
+    # @@FIXME is this what we want?
+    $output =~ s/\015?\012/\n/g;
+
+    # make sure we deal only with unix newlines
+    # tentative fix for http://www.w3.org/Bugs/Public/show_bug.cgi?id=3992
+    $output =~ s/(\r\n|\n|\r)/\n/g;
+
+    #debug: we could check if the content has utf8 bit on with
+    #$output= utf8::is_utf8($output) ? 1 : 0;
+    $File->{Content} = [split /\n/, $output];
+
+    return $File;
+}
+
+sub find_encodings
+{
+    my $File  = shift;
+    my $bom   = HTML::Encoding::encoding_from_byte_order_mark($File->{Bytes});
+    my @first = HTML::Encoding::encoding_from_first_chars($File->{Bytes});
+
+    if (defined $bom) {
+
+        # @@FIXME this BOM entry should not be needed at all!
+        $File->{BOM} = length(Encode::encode($bom, "\x{FEFF}"));
+        $File->{Charset}->{Auto} = lc $bom;
+    }
+    else {
+        $File->{Charset}->{Auto} = lc($first[0]) if @first;
+    }
+
+    my $xml = HTML::Encoding::encoding_from_xml_document($File->{Bytes});
+    $File->{Charset}->{XML} = lc $xml if defined $xml;
+
+    my %metah;
+    foreach my $try (@first) {
+
+        # @@FIXME I think the old code used HTML::Parser xml mode, check if ok
+        my $meta =
+            HTML::Encoding::encoding_from_meta_element($File->{Bytes}, $try);
+        $metah{lc($meta)}++ if defined $meta and length $meta;
+    }
+
+    if (!%metah) {
+
+        # HTML::Encoding doesn't support HTML5 <meta charset> as of 0.60,
+        # check it ourselves.  HTML::HeadParser >= 3.60 is required for this.
+
+        my $hp           = HTML::HeadParser->new();
+        my $seen_doctype = FALSE;
+        my $is_html5     = FALSE;
+        $hp->handler(
+            declaration => sub {
+                my ($tag, $text) = @_;
+                return if ($seen_doctype || uc($tag) ne '!DOCTYPE');
+                $seen_doctype = TRUE;
+                $is_html5     = TRUE
+                    if (
+                    $text =~ /<!DOCTYPE\s+html
+                                    (\s+SYSTEM\s+(['"])about:legacy-compat\2)?
+                                    \s*>/six
+                    );
+            },
+            'tag,text'
+        );
+        #$hp->parse(Encode::encode('UTF-8',$File->{Bytes}));
+        if ($is_html5) {
+            my $cs = $hp->header('X-Meta-Charset');
+            $metah{lc($cs)}++ if (defined($cs) && length($cs));
+        }
+    }
+
+    if (%metah) {
+        my @meta = sort { $metah{$b} <=> $metah{$a} } keys %metah;
+        $File->{Charset}->{META} = $meta[0];
+    }
+
+    return $File;
 }
 
 #
@@ -3220,7 +3243,7 @@ sub abort_if_error_flagged
 	
 	# transcode output from perl's internal to utf-8 and output
 	#print Encode::encode('UTF-8', $tmpl->output);
-	exit;
+	die;
 }
 
 #
@@ -3506,6 +3529,7 @@ sub error
         # No or unknown FPI and a relative SI.
         if ($err->{msg} =~ m(cannot (?:open|find))) {
                 $File->{'Error Flagged'} = TRUE;
+                print "error_message";
                 #my $tmpl = &W3C::Validator::MarkupValidator::get_error_template($File);
                 #$tmpl->param(fatal_parse_extid_error => TRUE);
                 #$tmpl->param(fatal_parse_extid_msg   => $err->{msg});
