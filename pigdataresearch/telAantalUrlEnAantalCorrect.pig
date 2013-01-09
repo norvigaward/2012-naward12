@@ -7,6 +7,6 @@ c = foreach b generate 'totaal:' as name, COUNT(a) as aantal;
 d = filter a by errorcode == ';'; --later een komma!
 e = group d all;
 f = foreach e generate 'correct:' as name, COUNT(d) as aantal;
-g = JOIN c by (name, aantal), f by (name, aantal);
+g = union c, f;
 --tot hier geen output
 dump g;
