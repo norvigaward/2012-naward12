@@ -7,6 +7,9 @@ noempty = foreach b generate url, ((errorcode is null or IsEmpty(errorcode)) ? {
 c = foreach noempty generate url, flatten(errorcode) as errorcode;
 d = distinct c;
 e = group d by errorcode;
-f= foreach e generate group, COUNT(d);
+ealles = group d all;
+f = foreach e generate group as errorNo, COUNT(d);
+g = foreach ealles generate 'totaal:' as errorNo, COUNT(d); 
+h = union f, g;
 -- tot hier geen output
-dump f;
+dump h;
