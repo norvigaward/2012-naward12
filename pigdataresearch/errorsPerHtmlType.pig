@@ -10,6 +10,6 @@ f = foreach e generate group as versie, COUNT(d) as aantalFoutenPerVersie;
 g = group a by htmlversion;
 h = foreach g generate group as versie2, COUNT(a) as aantalKeerAanwezig;
 i = join f by versie, h by versie2;
-j = foreach i generate versie, ((float)aantalFoutenPerVersie * (float)aantalKeerAanwezig * 100.0) as gemiddeldAantalFouten;
+j = foreach i generate versie, ((float)aantalFoutenPerVersie / (float)aantalKeerAanwezig) as gemiddeldAantalFouten;
 -- tot hier geen output
 dump j;
