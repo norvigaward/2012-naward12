@@ -10,9 +10,12 @@ foreach $file (@files)
 $arrayLength = scalar(@files);
 $boole = 1;
 $teller = 0;
+$mapCounter = 0;
     
 while($boole)
 {    
+    my $mapName = "map".$mapCounter;
+    $mapCounter++;
     my $loadList = "";
        
   if (++$teller < $arrayLength)
@@ -100,7 +103,7 @@ a = LOAD '$loadList' USING org.commoncrawl.pig.ArcLoader()  AS (charset: chararr
 b = FILTER a BY type == 'text/html';
 c = foreach b generate url, charset, REPLACE (html, '\\n', ' ') as html;define myscript `test.sh` input (stdin using PigStreaming('\\t')) output (stdout) ship('/home/participant/git/naward12/test.sh','/home/participant/git/naward12/check3','/home/participant/git/naward12/dtd.tar','/home/participant/git/naward12/charset.cfg', '/home/participant/git/naward12/httpd.conf','/home/participant/git/naward12/validator.conf','/home/participant/git/naward12/types.conf','/home/participant/git/naward12/tips.cfg');
 d = stream c through myscript as (url,errorcode, htmlversion, valid);
-store d into 'didado';";
+store d into '$mapName';";
   
 #print $pigString;
    open(HANDLE,">tmpfile.pig");
