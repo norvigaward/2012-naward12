@@ -1,8 +1,8 @@
 #!/usr/bin/perl -w
     
-my @files = `hadoop fs -ls hdfs://p-head03.alley.sara.nl/data/public/common-crawl/parse-output/segment/1346823845675`;
+@files = `hadoop fs -ls hdfs://p-head03.alley.sara.nl/data/public/common-crawl/parse-output/segment/1346823845675`;
     
-my $pigString = "register '//home//participant//git//commoncrawl-examples//lib//*.jar';
+$pigString = "register '//home//participant//git//commoncrawl-examples//lib//*.jar';
 register '//home//participant//git//commoncrawl-examples//dist//lib//commoncrawl-examples-1.0.1-HM.jar';
 a = LOAD '^1, ^2, ^3, ^4, ^5, ^6, ^7, ^8, ^9, ^10, ^11, ^12, ^13, ^14, ^15' USING org.commoncrawl.pig.ArcLoader() as (charset, length, type: chararray, statuscode, ipaddress, url, html);
 b = filter a by type == 'text//html';
@@ -17,9 +17,9 @@ foreach $file (@files)
   print $file;
 }
     
-my $arrayLength = scalar @files;
-my $boole = 1;
-my $teller = -1;
+$arrayLength = scalar @files;
+$boole = 1;
+$teller = -1;
     
 while($boole)
 {
