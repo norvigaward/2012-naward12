@@ -1,22 +1,13 @@
 #!/usr/bin/perl -w
     
 @files = `hadoop fs -ls hdfs://p-head03.alley.sara.nl/data/public/common-crawl/parse-output/segment/1346823845675`;
-    
-$pigString = "register '//home//participant//git//commoncrawl-examples//lib//*.jar';
-register '//home//participant//git//commoncrawl-examples//dist//lib//commoncrawl-examples-1.0.1-HM.jar';
-a = LOAD '^1, ^2, ^3, ^4, ^5, ^6, ^7, ^8, ^9, ^10, ^11, ^12, ^13, ^14, ^15' USING org.commoncrawl.pig.ArcLoader() as (charset, length, type: chararray, statuscode, ipaddress, url, html);
-b = filter a by type == 'text//html';
-c = foreach b generate url, charset, REPLACE (html, '\n', ' ') as html;
-define myscript `check3` input (stdin using PigStreaming('\t')) output (stdout) ship('//home//participant//git//naward12//check3','//home//participant//git//naward12//dtd.tar','//home//participant//git//naward12//charset.cfg', '//home//participant//git//naward12//httpd.conf','//home//participant//git//naward12//validator.conf','//home//participant//git//naward12//types.conf','//home//participant//git//naward12//tips.cfg');
-d = stream c through myscript as (url, errorcode, htmlversion, valid);
-store d into 'test15';"
-    
 foreach $file (@files)
 {
   $file = "hdfs://p-head03.alley.sara.nl".(substr $file, 55);
   print $file;
-}
+}    
     
+$pigString = "register '//home//participant//git//commoncrawl-examples//lib//*.jar'; register '//home//participant//git//commoncrawl-examples//dist//lib//commoncrawl-examples-1.0.1-HM.jar'; a = LOAD '^1, ^2, ^3, ^4, ^5, ^6, ^7, ^8, ^9, ^10, ^11, ^12, ^13, ^14, ^15' USING org.commoncrawl.pig.ArcLoader() as (charset, length, type: chararray, statuscode, ipaddress, url, html); b = filter a by type == 'text//html'; c = foreach b generate url, charset, REPLACE (html, '\n', ' ') as html; define myscript `check3` input (stdin using PigStreaming('\t')) output (stdout) ship('//home//participant//git//naward12//check3','//home//participant//git//naward12//dtd.tar','//home//participant//git//naward12//charset.cfg', '//home//participant//git//naward12//httpd.conf','//home//participant//git//naward12//validator.conf','//home//participant//git//naward12//types.conf','//home//participant//git//naward12//tips.cfg'); d = stream c through myscript as (url, errorcode, htmlversion, valid);store d into 'test15';"    
 $arrayLength = scalar @files;
 $boole = 1;
 $teller = -1;
