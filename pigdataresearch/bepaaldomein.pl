@@ -15,6 +15,6 @@ while(<>)
   my @domainGehakt = split('\.', $domain);
   my $lengte = scalar(@domainGehakt);
   my $output = $domainGehakt[$lengte - 1];
-  print "$output\t$errorcode";
+  print "$domain\t$output\t$errorcode";
   $/ = "\t";
 }
