@@ -18,17 +18,8 @@ while(<>)
 	chomp($url);
 	$/ = "\n";
 	$_ = <>;
-	s/\s+/ /g; #substitute one or more spaces for a space and do this for all match$
-	s/\s$//; #substitue a new line for nothing
 	my $html = "$_\n";
-	
-	my $html_picture = 0;
-	if($html =~ /".*href\=\"http\:\/\/validator.w3.org\/check\?uri\=referer\".*"/i)
-	{
-		$html_picture = 1;
-	}
-        $errorCodeMetVersie = subScript($html); #dit is een variabele met errocodes met ; ertussen de HTML versie
-    
-        print "$url\t$errorCodeMetVersie\t$html_picture\n"; #print $_ dan tab dan $error code
+        $errorCodeMetVersieenValid = subScript($html); #dit is een variabele met errocodes met ; ertussen de HTML versie
+        print "$url\t$errorCodeMetVersieenValid\n"; #print $_ dan tab dan $error code
         $/ = "\t";
 }

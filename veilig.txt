@@ -1,0 +1,7 @@
+hdfs://p-head03.alley.sara.nl//data/public/common-crawl/parse-output/segment/1346823846036/ deels
+/*.arc.gz,hdfs://p-head03.alley.sara.nl//data/public/common-crawl/parse-output/segment/1346823845675/*.arc.gz
+$ 1346876860611 deels, 4 en 5
+$ hdfs://p-head03.alley.sara.nl//data/public/common-crawl/parse-output/segment/1346876860614/*.arc.gz 12
+$ hdfs://p-head03.alley.sara.nl//data/public/common-crawl/parse-output/segment/1346876860765/*.arc.gz 14 with picture
+hdfs://p-head03.alley.sara.nl//data/public/common-crawl/parse-output/segment/1346876860467/*.arc.gz 15 with picture
+hdfs://p-head03.alley.sara.nl//data/public/common-crawl/parse-output/segment/1346876860493/*.arc.gz 16
