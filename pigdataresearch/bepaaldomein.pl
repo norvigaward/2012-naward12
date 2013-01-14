@@ -15,6 +15,7 @@ while(<>)
   my @domainGehakt = split('\.', $domain);
   my $lengte = scalar(@domainGehakt);
   my $output = $domainGehakt[$lengte - 1];
-  print "$string1\t$output\t$errorcode";
+  my $string2 = $url->as_string;
+  print "$string2\t$output\t$errorcode";
   $/ = "\t";
 }
