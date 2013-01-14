@@ -9,15 +9,10 @@ e = foreach d generate url, domain, TOKENIZE(errorcode) as errorcode;
 f = foreach e generate url, domain, flatten(errorcode) as errorcode;
 g = distinct f;
 h = group g by domain;
-i = foreach h generate group as versie, COUNT(g) as aantalFoutenPerDomein;
--- no output before this line
-dump i;
-
-
-
-
-a = load '/home/participant/for_real14/part-m-00041' as (url: chararray, errorcode: chararray, htmlversion, valid);
-b = filter a by NOT errorcode == 'error';
-c = foreach b generate url, errorcode;
-define myscript `bepaaldomein.pl` input (stdin using PigStreaming('\t')) output (stdout) ship('/home/participant/git/naward12/pigdataresearch/bepaaldomein.pl');
-d = stream c through myscript as (domain, errorcode);
+i = foreach h generate group as tldomain, COUNT(g) as aantalFoutenPerDomein;
+j = group d by domain;
+k = foreach j generate group as tldomain2, COUNT(d) as aantalKeerAanwezig;
+l = join i by tldomain, k by tldomain2;
+m = foreach l generate tldomain, ((float)aantalFoutenPerDomein / (float)aantalKeerAanwezig) as gemAantalFouten;
+-- no output till here
+dump m;
