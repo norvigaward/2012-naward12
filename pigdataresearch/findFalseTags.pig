@@ -1,4 +1,4 @@
--- filter all tuples that have a tag but also have errorcodes.
+-- filter all tuples that have a tag for good html but nevertheless have errorcodes.
 
 a = load 'hdfs://p-head03.alley.sara.nl/user/naward12/test24/*' as (url: chararray, errorcode: chararray, htmlversion, valid, tag);
 b = foreach a generate url, TOKENIZE(errorcode) as errorcode, tag;
