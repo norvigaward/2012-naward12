@@ -13,4 +13,4 @@ h = foreach g generate group as versie2, COUNT(a) as aantalKeerAanwezig;
 i = join f by versie, h by versie2;
 j = foreach i generate versie, ((float)aantalFoutenPerVersie / (float)aantalKeerAanwezig) as gemiddeldAantalFouten;
 -- no output until here
-store j into errorsbyhtmltype;
+store j into 'errorsbyhtmltype';
