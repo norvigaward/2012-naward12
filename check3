@@ -233,7 +233,7 @@ our $File = {};
 #### Process CGI variables and initialize. ####################################
 ###############################################################################
 $/ = "\t";
-my $timeout = 10;
+my $timeout = 1;
 while(<>)
 {
 	eval{
@@ -563,7 +563,7 @@ while(<>)
                 $File->{Tentative} |= T_ERROR;    # Can never be valid.
                 &add_warning('W04', {W04_charset => "UTF-8"});
         }
-        
+        $File->{Errors}     = [];
         # Always transcode, even if the content claims to be UTF-8
         $File = transcode($File);
         
@@ -636,7 +636,7 @@ while(<>)
         
         # before we start the parsing, clean slate
         $File->{'Is Valid'} = TRUE;
-        $File->{Errors}     = [];
+        
         $File->{WF_Errors}  = [];
         
         
@@ -2720,7 +2720,7 @@ sub set_parse_mode
                 w06_doctype => $File->{DOCTYPE}
             }
         );
-        $File->{'Error Flagged'} = TRUE;
+        #$File->{'Error Flagged'} = TRUE;
         return;
     }
 
@@ -2749,7 +2749,7 @@ sub set_parse_mode
             }
             
         );
-        $File->{'Error Flagged'} = TRUE;
+        #$File->{'Error Flagged'} = TRUE;
         return;
     }
 
@@ -2962,7 +2962,6 @@ sub transcode
     # Does the system support decoding this encoding?
     
     my $enc = Encode::find_encoding($cs);
-    
     if (!$enc) {
 
         # This system's Encode installation does not support
@@ -2993,14 +2992,19 @@ sub transcode
     eval { $output = $enc->decode($input, Encode::FB_CROAK); };
 
     if ($@) {
+    
     eval { $output = $enc->decode($input, Encode::FB_DEFAULT); };
-    #$err->{msg} => 'more then one encoding';
-    #push @{$File->{Errors}}, $err;
+    $err->{msg} = 'more then one encoding';
+    $err->{num} = 600;
+    push @{$File->{Errors}}, $err;
+    $err->{type} = "E";
+    if ($@) {
+ 	  $File->{'Error Flagged'} = TRUE;
+        print "error_encoding2"; 
+    }
     
     }
-    #$err->{msg} => 'more then one encoding';
-    #push @{$File->{Errors}}, $err;
-
+    
     # @@FIXME is this what we want?
     $output =~ s/\015?\012/\n/g;
 
@@ -3020,7 +3024,7 @@ sub find_encodings
     my $File  = shift;
     my $bom   = HTML::Encoding::encoding_from_byte_order_mark($File->{Bytes});
     my @first = HTML::Encoding::encoding_from_first_chars($File->{Bytes});
-
+    
     if (defined $bom) {
 
         # @@FIXME this BOM entry should not be needed at all!
@@ -3065,7 +3069,7 @@ sub find_encodings
             },
             'tag,text'
         );
-        #$hp->parse(Encode::encode('UTF-8',$File->{Bytes}));
+        $hp->parse($File->{Bytes});
         if ($is_html5) {
             my $cs = $hp->header('X-Meta-Charset');
             $metah{lc($cs)}++ if (defined($cs) && length($cs));
