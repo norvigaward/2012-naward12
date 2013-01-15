@@ -10,7 +10,7 @@ f = foreach e generate url, domain, flatten(errorcode) as errorcode;
 g = distinct f;
 gfilter = filter g by NOT errorcode == '600';
 h = group gfilter by domain;
-i = foreach h generate group as tldomain, COUNT(g) as aantalFoutenPerDomein;
+i = foreach h generate group as tldomain, COUNT(gfilter) as aantalFoutenPerDomein;
 j = group d by domain;
 k = foreach j generate group as tldomain2, COUNT(d) as aantalKeerAanwezig;
 l = join i by tldomain, k by tldomain2;
