@@ -5,9 +5,9 @@ noerr = filter a by NOT errorcode == 'error';
 b = foreach noerr generate url, valid, tag;
 c = filter b by (valid == 0 AND tag == 1);
 d = foreach c generate url, valid;
--- tot hier geen output
+-- no output until here
 store d into 'findFalseTags';
--- hierna het tellen
+-- and count the number of sites with false tags too
 e = group d by valid;
 f = foreach e generate COUNT(d) as aantalKeerAanwezig;
 store f into 'findFalseTagsAantal';
