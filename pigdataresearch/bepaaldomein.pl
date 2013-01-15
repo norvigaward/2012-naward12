@@ -1,6 +1,6 @@
 #!/usr/bin/perl -w
 
-#this script extracts the top level domain out of an url
+#this script extracts the top level domain out of an url.
 use URI;
 
 $/ = "\t";
