@@ -8,7 +8,7 @@ d = stream c through myscript as (url, domain, errorcode);
 e = foreach d generate url, domain, TOKENIZE(errorcode) as errorcode;
 f = foreach e generate url, domain, flatten(errorcode) as errorcode;
 g = distinct f;
-gfilter = filter g by NOT errorcode == 600;
+gfilter = filter g by NOT errorcode == '600';
 h = group gfilter by domain;
 i = foreach h generate group as tldomain, COUNT(g) as aantalFoutenPerDomein;
 j = group d by domain;
