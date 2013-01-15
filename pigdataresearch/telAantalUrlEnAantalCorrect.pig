@@ -1,4 +1,4 @@
--- count the total number of tuples and the number of tuples with correct html
+--  count the total number of tuples and the number of tuples with correct html
 
 a = load 'hdfs://p-head03.alley.sara.nl/user/naward12/test24/*' as (url: chararray, errorcode: chararray, htmlversion, valid, tag);
 b = group a all;
