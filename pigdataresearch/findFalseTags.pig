@@ -2,8 +2,12 @@
 
 a = load 'hdfs://p-head03.alley.sara.nl/user/naward12/for_real25/, hdfs://p-head03.alley.sara.nl/user/naward12/for_real26/, hdfs://p-head03.alley.sara.nl/user/naward12/for_real28/' as (url: chararray, errorcode: chararray, htmlversion, valid, tag);
 noerr = filter a by NOT errorcode == 'error';
-b = foreach noerr generate url, TOKENIZE(errorcode) as errorcode, tag;
-c = filter b by(NOT IsEmpty(errorcode) AND tag == 1);
-d = foreach c generate url;
+b = foreach noerr generate url, valid, tag;
+c = filter b by (valid == 0 AND tag == 1);
+d = foreach c generate url, valid;
 -- tot hier geen output
 store d into 'findFalseTags';
+-- hierna het tellen
+e = group d by valid;
+f = foreach e generate COUNT(d) as aantalKeerAanwezig;
+store f into 'findFalseTagsAantal';
