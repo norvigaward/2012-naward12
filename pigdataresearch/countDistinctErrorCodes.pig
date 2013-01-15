@@ -10,5 +10,5 @@ ealles = group d all;
 f = foreach e generate group as errorNo, COUNT(d);
 g = foreach ealles generate 'totaal:' as errorNo, COUNT(d); 
 h = union f, g;
--- tot hier geen output
+-- no output above this line
 store h into 'countdistincterrors';
