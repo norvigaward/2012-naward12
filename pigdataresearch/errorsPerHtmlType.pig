@@ -7,7 +7,7 @@ c = foreach noempty generate url, htmlversion, flatten(errorcode) as errorcode;
 d = distinct c;
 dfilter = filter d by NOT errorcode == '600';
 e = group dfilter by htmlversion;
-f = foreach e generate group as versie, COUNT(d) as aantalFoutenPerVersie;
+f = foreach e generate group as versie, COUNT(dfilter) as aantalFoutenPerVersie;
 g = group a by htmlversion;
 h = foreach g generate group as versie2, COUNT(a) as aantalKeerAanwezig;
 i = join f by versie, h by versie2;
