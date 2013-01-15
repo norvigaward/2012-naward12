@@ -3,6 +3,7 @@
 a = load 'hdfs://p-head03.alley.sara.nl/user/naward12/for_real25/, hdfs://p-head03.alley.sara.nl/user/naward12/for_real26/, hdfs://p-head03.alley.sara.nl/user/naward12/for_real28/' as (url: chararray, errorcode: chararray, htmlversion, valid, tag);
 noerr = filter a by NOT errorcode == 'error';
 b = foreach noerr generate url, TOKENIZE(errorcode) as errorcode, tag;
-c = filter d by(NOT IsEmpty(errorcode) AND tag == 1);
+c = filter b by(NOT IsEmpty(errorcode) AND tag == 1);
+d = foreach c generate url;
 -- tot hier geen output
-dump c;
+store d into 'findFalseTags';
